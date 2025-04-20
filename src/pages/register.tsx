@@ -1,3 +1,4 @@
+// src/pages/Register.tsx
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
@@ -7,16 +8,24 @@ import {
   Typography,
   message,
   Space,
+  Divider,
   theme,
-  Tooltip,
 } from 'antd';
-import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
+import {
+  UserOutlined,
+  MailOutlined,
+  LockOutlined,
+} from '@ant-design/icons';
+import { GoogleLogin } from '@react-oauth/google';
+import { Link, useNavigate } from 'react-router-dom';
 import axiosInstance from '../services/axiosInstance';
-import { useNavigate } from 'react-router-dom';
+import { useAppDispatch } from '../store/hooks';
+import { setCredentials } from '../store/userSlice';
+import auth from '../assests/auth.jpg';
 
 const { Title, Text } = Typography;
 
-interface RegisterFormInputs {
+interface FormInputs {
   name: string;
   email: string;
   password: string;
@@ -25,20 +34,23 @@ interface RegisterFormInputs {
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    token: { colorBgContainer, borderRadius, colorPrimary, colorTextSecondary },
-  } = theme.useToken();
-
+  const dispatch = useAppDispatch();
+  const { token } = theme.useToken();
   const {
     control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormInputs>({
-    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
+  } = useForm<FormInputs>({
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
-  const onSubmit = async (data: RegisterFormInputs) => {
+  const onManualRegister = async (data: FormInputs) => {
     if (data.password !== data.confirmPassword) {
       return message.error('Passwords do not match');
     }
@@ -48,10 +60,26 @@ const Register: React.FC = () => {
         email: data.email,
         password: data.password,
       });
-      message.success('Registration successful! Check your email to verify.');
+      message.success(
+        'Registration successful! 🎉 Check your email for a verification link before logging in.'
+      );
       navigate('/login');
     } catch (err: any) {
       message.error(err.response?.data?.message || 'Registration failed');
+    }
+  };
+
+  const onGoogleRegister = async (resp: any) => {
+    try {
+      const res = await axiosInstance.post('/auth/google', {
+        credential: resp.credential,
+      });
+      dispatch(setCredentials({ token: res.data.token, email: res.data.email }));
+      message.success(`Logged in as ${res.data.email}`);
+      navigate('/');
+    } catch (err) {
+      console.error(err);
+      message.error('Google sign‑up failed');
     }
   };
 
@@ -62,28 +90,27 @@ const Register: React.FC = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f0f5ff, #d6e4ff)',
-        padding: 16,
+        backgroundImage: `url(${auth})`,
       }}
     >
       <Card
-       variant={'borderless'}
+        
         style={{
-          width: 380,
-          borderRadius,
-          background: colorBgContainer,
+          backgroundColor: ' #e8f9fd',
+          width: 400,
+          borderRadius: '20px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
         }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          {/* Visual Hierarchy: Clear, large heading */}
-          <Title level={3} style={{ textAlign: 'center', color: colorPrimary }}>
-            Create Account
+          <Title level={3} style={{ textAlign: 'center' }}>
+            Create Your Account
           </Title>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Simplicity & Clarity: minimal, well‑labeled fields */}
+          {/* Manual Registration */}
+          <form onSubmit={handleSubmit(onManualRegister)} autoComplete='off'>
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              {/* Name */}
               <Controller
                 name="name"
                 control={control}
@@ -91,104 +118,109 @@ const Register: React.FC = () => {
                 render={({ field }) => (
                   <Input
                     {...field}
+                    autoComplete='off'
                     size="large"
-                    placeholder="Full Name"
                     prefix={<UserOutlined />}
-                    aria-label="Full name"
+                    placeholder="Full Name"
                   />
                 )}
               />
-              {errors.name && <Text type="danger">{errors.name.message}</Text>}
+              {errors.name && (
+                <Text type="danger">{errors.name.message}</Text>
+              )}
 
+              {/* Email */}
               <Controller
                 name="email"
                 control={control}
                 rules={{
                   required: 'Email is required',
                   pattern: {
-                    value: /^[^\s@]+@yourcompany\.com$/,
-                    message: 'Use yourcompany.com email',
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: 'Invalid email address',
                   },
                 }}
                 render={({ field }) => (
                   <Input
-                    {...field}
+                   
                     size="large"
-                    placeholder="name@yourcompany.com"
                     prefix={<MailOutlined />}
-                    aria-label="Work email"
+                    placeholder="Email"
                   />
                 )}
               />
-              {errors.email && <Text type="danger">{errors.email.message}</Text>}
+              {errors.email && (
+                <Text type="danger">{errors.email.message}</Text>
+              )}
 
+              {/* Password */}
               <Controller
                 name="password"
                 control={control}
                 rules={{
                   required: 'Password is required',
-                  minLength: { value: 8, message: 'Min 8 characters' },
-                  pattern: {
-                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*\W).+$/,
-                    message:
-                      'Include uppercase, lowercase, number & special char',
-                  },
+                  minLength: { value: 8, message: 'Minimum 8 characters' },
                 }}
                 render={({ field }) => (
                   <Input.Password
-                    {...field}
+                    
                     size="large"
-                    placeholder="Password"
                     prefix={<LockOutlined />}
-                    aria-label="Password"
+                    placeholder="Password"
                   />
                 )}
               />
-              {errors.password && <Text type="danger">{errors.password.message}</Text>}
+              {errors.password && (
+                <Text type="danger">{errors.password.message}</Text>
+              )}
 
+            
               <Controller
                 name="confirmPassword"
                 control={control}
                 rules={{
                   required: 'Please confirm password',
-                  validate: (v) =>
-                    v === watch('password') || 'Passwords do not match',
+                  validate: (val) =>
+                    val === watch('password') || 'Passwords do not match',
                 }}
                 render={({ field }) => (
                   <Input.Password
-                    {...field}
+                
                     size="large"
-                    placeholder="Confirm Password"
                     prefix={<LockOutlined />}
-                    aria-label="Confirm password"
+                    placeholder="Confirm Password"
                   />
                 )}
               />
               {errors.confirmPassword && (
                 <Text type="danger">{errors.confirmPassword.message}</Text>
               )}
-            </Space>
 
-            {/* User Control: clear Cancel button; Feedback: loading state */}
-            <Space style={{ marginTop: 24, width: '100%' }}>
-              <Button
-                htmlType="button"
-                onClick={() => navigate('/login')}
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </Button>
-              <Button
+              <Button style={{padding: '20px', borderRadius: '15px'}}
                 type="primary"
                 htmlType="submit"
                 block
                 loading={isSubmitting}
-                style={{ flex: 2 }}
               >
                 Register
               </Button>
             </Space>
           </form>
+
+          {/* Google Registration */}
+          <Divider>Or Sign up with Google</Divider>
+          <div style={{ textAlign: 'center' }}>
+            <GoogleLogin
+              onSuccess={onGoogleRegister}
+              onError={() => message.error('Google sign‑up failed')}
+            />
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <Text>
+              Already have an account? <Link to="/login">Log In</Link>
+            </Text>
+          </div>
         </Space>
       </Card>
     </div>

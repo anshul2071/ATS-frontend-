@@ -114,7 +114,6 @@ const CVUpload: React.FC = () => {
                             </Form.Item>
                             </Form>
                             </Card>
-                                
-
         )
 }
+export default CVUpload;
