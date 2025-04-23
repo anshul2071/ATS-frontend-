@@ -59,6 +59,7 @@ const Register: React.FC = () => {
         name: data.name,
         email: data.email,
         password: data.password,
+        confirmPassword: data.confirmPassword,    // ← include this!
       });
       message.success(
         'Registration successful! 🎉 Check your email for a verification link before logging in.'
@@ -94,23 +95,21 @@ const Register: React.FC = () => {
       }}
     >
       <Card
-        
+        variant="borderless"                    
         style={{
-          backgroundColor: ' #e8f9fd',
+          backgroundColor: '#e8f9fd',
           width: 400,
           borderRadius: '20px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
         }}
       >
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Title level={3} style={{ textAlign: 'center' }}>
+          <Title level={3} style={{ textAlign: 'center', margin: 0 }}>
             Create Your Account
           </Title>
 
-          {/* Manual Registration */}
-          <form onSubmit={handleSubmit(onManualRegister)} autoComplete='off'>
+          <form onSubmit={handleSubmit(onManualRegister)} autoComplete="off">
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              {/* Name */}
               <Controller
                 name="name"
                 control={control}
@@ -118,7 +117,7 @@ const Register: React.FC = () => {
                 render={({ field }) => (
                   <Input
                     {...field}
-                    autoComplete='off'
+                    autoComplete="off"
                     size="large"
                     prefix={<UserOutlined />}
                     placeholder="Full Name"
@@ -129,7 +128,6 @@ const Register: React.FC = () => {
                 <Text type="danger">{errors.name.message}</Text>
               )}
 
-              {/* Email */}
               <Controller
                 name="email"
                 control={control}
@@ -142,7 +140,8 @@ const Register: React.FC = () => {
                 }}
                 render={({ field }) => (
                   <Input
-                   
+                    {...field}
+                    autoComplete="off"
                     size="large"
                     prefix={<MailOutlined />}
                     placeholder="Email"
@@ -153,7 +152,6 @@ const Register: React.FC = () => {
                 <Text type="danger">{errors.email.message}</Text>
               )}
 
-              {/* Password */}
               <Controller
                 name="password"
                 control={control}
@@ -163,7 +161,8 @@ const Register: React.FC = () => {
                 }}
                 render={({ field }) => (
                   <Input.Password
-                    
+                    {...field}
+                    autoComplete="new-password"
                     size="large"
                     prefix={<LockOutlined />}
                     placeholder="Password"
@@ -174,7 +173,6 @@ const Register: React.FC = () => {
                 <Text type="danger">{errors.password.message}</Text>
               )}
 
-            
               <Controller
                 name="confirmPassword"
                 control={control}
@@ -185,7 +183,8 @@ const Register: React.FC = () => {
                 }}
                 render={({ field }) => (
                   <Input.Password
-                
+                    {...field}
+                    autoComplete="new-password"
                     size="large"
                     prefix={<LockOutlined />}
                     placeholder="Confirm Password"
@@ -196,18 +195,18 @@ const Register: React.FC = () => {
                 <Text type="danger">{errors.confirmPassword.message}</Text>
               )}
 
-              <Button style={{padding: '20px', borderRadius: '15px'}}
+              <Button
                 type="primary"
                 htmlType="submit"
                 block
                 loading={isSubmitting}
+                style={{ padding: '20px', borderRadius: '15px' }}
               >
                 Register
               </Button>
             </Space>
           </form>
 
-          {/* Google Registration */}
           <Divider>Or Sign up with Google</Divider>
           <div style={{ textAlign: 'center' }}>
             <GoogleLogin
