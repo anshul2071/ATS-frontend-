@@ -66,6 +66,7 @@ const CandidateList: React.FC = () => {
             <Select.Option value="Shortlisted">Shortlisted</Select.Option>
             <Select.Option value="First Interview">First Interview</Select.Option>
             <Select.Option value="Second Interview">Second Interview</Select.Option>
+            <Select.Option value="Third Interview">Third Interview</Select.Option>
             <Select.Option value="Hired">Hired</Select.Option>
             <Select.Option value="Rejected">Rejected</Select.Option>
             <Select.Option value="Blacklisted">Blacklisted</Select.Option>

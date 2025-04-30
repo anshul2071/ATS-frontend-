@@ -1,91 +1,115 @@
-import React from "react";
-import {Card, Form, InputNumber, Select, DatePicker, Button, message} from "antd";
-import axiosInstance  from "../services/axiosInstance";
-import axios from "axios";
+import React, { useEffect, useState } from 'react'
+import { Card, Form, Select, DatePicker, Button, message, Spin } from 'antd'
+import axiosInstance from '../services/axiosInstance'
 
+interface Candidate {
+  _id: string
+  name: string
+  email: string
+}
 
-const InterviewSchedule: React.FC = () => {
-    const [form] = Form.useForm();
-    const [submitting, setSubmitting] = React.useState(false);
+const pipelineStages = [
+  'HR Screening',
+  'Technical Interview',
+  'Managerial Interview',
+  'Final Interview',
+]
 
-    const onFinish =async(values: any) => {
-        setSubmitting(true);
-        try {
-            await axiosInstance.post('/interviews', values);
-            message.success('Interview scheduled successfully');
-            form.resetFields();
-        }
-            catch(error:any) {
-                message.error('Interview scheduling failed');
+export default function InterviewSchedule() {
+  const [form] = Form.useForm()
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-            }
+  useEffect(() => {
+    setLoading(true)
+    axiosInstance
+      .get<Candidate[]>('/candidates', { params: { status: 'Shortlisted' } })
+      .then((res) => setCandidates(res.data))
+      .catch(() => message.error('Failed to load shortlisted candidates.'))
+      .finally(() => setLoading(false))
+  }, [])
 
-            finally {
-                setSubmitting(false);
-            }
-        };
+  const onFinish = async (vals: any) => {
+    setSubmitting(true)
+    try {
+      await axiosInstance.post('/interviews', {
+        candidate:   vals.candidateId,
+        round:       vals.round,
+        interviewer: vals.interviewer,
+        date:        vals.date.toISOString(),
+      })
+      message.success('Interview scheduled successfully')
+      form.resetFields()
+    } catch {
+      message.error('Interview scheduling failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
-        return (
+  if (loading) {
+    return <Spin size="large" style={{ display: 'block', margin: 100 }} />
+  }
 
-            <Card title = "Schedule Interview" style={{ width: 600, margin: 'auto' }}>
-                <Form layout="vertical" form={form} onFinish={onFinish}>
-                    <Form.Item 
-                        name={"candidateId"}
-                        label = "Candidate ID"
-                        rules={[{
-                            required: true,
-                            message: 'Candidate ID is required'
-                        }]}
-                        >
-                            <InputNumber style={{ width: '100%' }} />
-                        </Form.Item>
-                        <Form.Item
-                             name="round"
-                             label = "Round"
-                             rules={[{
-                                required: true,
+  return (
+    <Card title="Schedule Interview" style={{ maxWidth: 600, margin: '24px auto' }}>
+      <Form form={form} layout="vertical" onFinish={onFinish} autoComplete="off">
+        <Form.Item
+          name="candidateId"
+          label="Candidate"
+          rules={[{ required: true, message: 'Please select a candidate' }]}
+        >
+          <Select placeholder="Select a shortlisted candidate">
+            {candidates.map((c) => (
+              <Select.Option key={c._id} value={c._id}>
+                {c.name} ({c.email})
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
 
-                             }]}
-                             >
-                             <InputNumber style={{ width: '100%' }} />
-                        </Form.Item>
-                        <Form.Item 
-                             name="interviewer"
-                             label = "Interviewer"
-                             rules={[{
-                                required: true,
+        <Form.Item
+          name="round"
+          label="Pipeline Stage"
+          rules={[{ required: true, message: 'Please select a pipeline stage' }]}
+        >
+          <Select placeholder="Select pipeline stage">
+            {pipelineStages.map((s) => (
+              <Select.Option key={s} value={s}>
+                {s}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
 
-                             }]}
-                             >
-                                <Select placeholder = "Select Interviewer">
-                                    <Select.Option value = "HR">HR</Select.Option>
-                                    <Select.Option value = "Tech">Tech</Select.Option>
-                                </Select>
+        <Form.Item
+          name="interviewer"
+          label="Interviewer"
+          rules={[{ required: true, message: 'Please select an interviewer' }]}
+        >
+          <Select placeholder="Select interviewer">
+            <Select.Option value="HR">HR</Select.Option>
+            <Select.Option value="Tech">Tech</Select.Option>
+            <Select.Option value="Manager">Manager</Select.Option>
+          </Select>
+        </Form.Item>
 
-                        </Form.Item>
+        <Form.Item
+          name="date"
+          label="Date & Time"
+          rules={[{ required: true, message: 'Please select date & time' }]}
+        >
+          <DatePicker showTime style={{ width: '100%' }} />
+        </Form.Item>
 
-                        <Form.Item 
-                          name = "date"
-                          label = "Date & Time"
-                          rules={[{
-                              required: true,
-                          }]}
-                          >
-                            <DatePicker showTime style = {{width: '100%'}} />
-                          </Form.Item>
-                          <Form.Item >
-                          <Button 
-                                type="primary"
-                                htmlType="submit"
-                                loading={submitting}
-                                style={{ width: '100%' }}
-                            >
-                                Schedule Interview
-                            </Button>
-                          </Form.Item>
-                           </Form>
-            </Card>
-        );
-    };
+        <Form.Item>
+          <Button type="primary" htmlType="submit" loading={submitting} block>
+            Schedule Interview
+          </Button>
+        </Form.Item>
+      </Form>
+    </Card>
+  )
+}
 
-    export default InterviewSchedule;

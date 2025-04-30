@@ -1,5 +1,5 @@
-import React, { FC, useState } from 'react';
-import { Layout, Menu, Button, theme, Tooltip } from 'antd';
+import React, {  useState } from 'react'
+import { Layout, Modal, Menu, Button, theme, Tooltip } from 'antd'
 import {
   DashboardOutlined,
   UploadOutlined,
@@ -8,28 +8,39 @@ import {
   SettingOutlined,
   TeamOutlined,
   LogoutOutlined,
-} from '@ant-design/icons';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { logout } from '../store/userSlice';
+} from '@ant-design/icons'
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { logout } from '../store/userSlice'
 
-const { Header, Sider, Content, Footer } = Layout;
 
-const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const email = useAppSelector((state) => state.user.email);
+const { Header, Sider, Content, Footer } = Layout
+
+const LayoutComponent: React.FC = () => {
+  const [collapsed, setCollapsed] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const email = useAppSelector((state) => state.user.email)
 
   const {
     token: { colorBgContainer, borderRadius, colorTextSecondary, colorPrimary },
-  } = theme.useToken();
+  } = theme.useToken()
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
-  };
+    Modal.confirm({
+      title: 'Confirm Logout',
+      content: 'Are you sure you want to logout?',
+      okText: 'Yes',
+      cancelText: 'No',
+      onOk: () => {
+        dispatch(logout())
+        navigate('/login')
+      },
+    })
+
+
+    }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -44,7 +55,7 @@ const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
           style={{
             height: 40,
             margin: '16px',
-            background: 'rgba(255, 255, 255, 0.3)',
+            background: 'rgba(255,255,255,0.3)',
             borderRadius,
             textAlign: 'center',
             color: '#fff',
@@ -54,7 +65,6 @@ const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
         >
           ATS
         </div>
-
         <Menu
           theme="dark"
           mode="inline"
@@ -65,14 +75,10 @@ const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
             { key: '/upload', icon: <UploadOutlined />, label: <Link to="/upload">Upload CV</Link> },
             { key: '/candidates', icon: <UserOutlined />, label: <Link to="/candidates">Candidates</Link> },
             { key: '/schedule', icon: <CalendarOutlined />, label: <Link to="/schedule">Schedule Interview</Link> },
+            { key: '/interviews', icon: <CalendarOutlined />, label: <Link to="/interviews">Interview List</Link>},
             { key: '/custom-sections', icon: <SettingOutlined />, label: <Link to="/custom-sections">Custom Sections</Link> },
             { key: '/collaboration', icon: <TeamOutlined />, label: <Link to="/collaboration">Collaboration</Link> },
-            {
-              key: 'logout',
-              icon: <LogoutOutlined />,
-              label: <span onClick={handleLogout}>Logout</span>,
-              danger: true,
-            },
+            
           ]}
         />
       </Sider>
@@ -91,7 +97,6 @@ const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
           <div style={{ fontWeight: 500 }}>
             Welcome{email ? `, ${email}` : ''}
           </div>
-
           <Tooltip title="Logout">
             <Button
               type="primary"
@@ -104,8 +109,15 @@ const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
           </Tooltip>
         </Header>
 
-        <Content style={{ margin: '24px 16px', padding: '24px', background: colorBgContainer, borderRadius }}>
-          {children}
+        <Content
+          style={{
+            margin: '24px 16px',
+            padding: '24px',
+            background: colorBgContainer,
+            borderRadius,
+          }}
+        >
+          <Outlet />
         </Content>
 
         <Footer style={{ textAlign: 'center', color: colorTextSecondary }}>
@@ -113,7 +125,7 @@ const LayoutComponent: FC<{ children: React.ReactNode }> = ({ children }) => {
         </Footer>
       </Layout>
     </Layout>
-  );
-};
+  )
+}
 
-export default LayoutComponent;
+export default LayoutComponent

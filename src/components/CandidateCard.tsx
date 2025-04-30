@@ -19,6 +19,7 @@ const statusColors: Record<string, string> = {
   Shortlisted: 'green',
   'First Interview': 'blue',
   'Second Interview': 'purple',
+  'Third Interview': 'orange',
   Hired: 'gold',
   Rejected: 'red',
   Blacklisted: 'default',

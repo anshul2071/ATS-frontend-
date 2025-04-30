@@ -1,41 +1,41 @@
-// src/pages/Register.tsx
-import React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import React, { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import {
   Card,
   Input,
   Button,
   Typography,
-  message,
+  Alert,
   Space,
   Divider,
+  message,
   theme,
-} from 'antd';
+} from 'antd'
 import {
   UserOutlined,
   MailOutlined,
   LockOutlined,
-} from '@ant-design/icons';
-import { GoogleLogin } from '@react-oauth/google';
-import { Link, useNavigate } from 'react-router-dom';
-import axiosInstance from '../services/axiosInstance';
-import { useAppDispatch } from '../store/hooks';
-import { setCredentials } from '../store/userSlice';
-import auth from '../assests/auth.jpg';
+} from '@ant-design/icons'
+import { GoogleLogin } from '@react-oauth/google'
+import { Link, useNavigate } from 'react-router-dom'
+import axiosInstance from '../services/axiosInstance'
+import { useAppDispatch } from '../store/hooks'
+import { setCredentials } from '../store/userSlice'
+import auth from '../assests/auth.jpg'
 
-const { Title, Text } = Typography;
+const { Title, Text } = Typography
 
 interface FormInputs {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
+  name: string
+  email: string
+  password: string
+  confirmPassword: string
 }
 
 const Register: React.FC = () => {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const { token } = theme.useToken();
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const { token } = theme.useToken()
   const {
     control,
     handleSubmit,
@@ -48,41 +48,123 @@ const Register: React.FC = () => {
       password: '',
       confirmPassword: '',
     },
-  });
+  })
+
+  const [registrationState, setRegistrationState] = useState<
+    'idle' | 'sending' | 'sent' | 'error'
+  >('idle')
+  const [registeredToken, setRegisteredToken] = useState<string>('')
+  const [registeredEmail, setRegisteredEmail] = useState<string>('')
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
   const onManualRegister = async (data: FormInputs) => {
     if (data.password !== data.confirmPassword) {
-      return message.error('Passwords do not match');
+      message.error('Passwords do not match')
+      return
     }
-    try {
-      await axiosInstance.post('/auth/register', {
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        confirmPassword: data.confirmPassword,    // ← include this!
-      });
-      message.success(
-        'Registration successful! 🎉 Check your email for a verification link before logging in.'
-      );
-      navigate('/login');
-    } catch (err: any) {
-      message.error(err.response?.data?.message || 'Registration failed');
-    }
-  };
 
-  const onGoogleRegister = async (resp: any) => {
+    setRegistrationState('sending')
     try {
-      const res = await axiosInstance.post('/auth/google', {
-        credential: resp.credential,
-      });
-      dispatch(setCredentials({ token: res.data.token, email: res.data.email }));
-      message.success(`Logged in as ${res.data.email}`);
-      navigate('/');
-    } catch (err) {
-      console.error(err);
-      message.error('Google sign‑up failed');
+      const res = await axiosInstance.post<{
+        message: string
+        token: string
+      }>(
+        '/auth/register',
+        {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        }
+      )
+
+      setRegisteredToken(res.data.token)
+      setRegisteredEmail(data.email)
+      setRegistrationState('sent')
+    } catch (err: any) {
+      setErrorMessage(
+        err.response?.data?.message || 'Registration failed'
+      )
+      setRegistrationState('error')
     }
-  };
+  }
+
+  const onGoogleRegister = async (response: any) => {
+    try {
+      const res = await axiosInstance.post<{
+        token: string
+        email: string
+      }>(
+        '/auth/google',
+        {
+          credential: response.credential,
+        }
+      )
+
+      dispatch(
+        setCredentials({
+          token: res.data.token,
+          email: res.data.email,
+        })
+      )
+      navigate('/')
+    } catch {
+      message.error('Google sign-up failed')
+    }
+  }
+
+  if (registrationState === 'sent') {
+    return (
+      <div
+        style={{
+          maxWidth: 400,
+          margin: '5rem auto',
+          textAlign: 'center',
+        }}
+      >
+        <Title level={3}>Verify Your Email</Title>
+        <Alert
+          type="info"
+          message={`A verification link and OTP have been sent to ${registeredEmail}.`}
+          showIcon
+          style={{
+            marginBottom: 24,
+            textAlign: 'left',
+          }}
+        />
+        <Space
+          direction="vertical"
+          size="middle"
+          style={{ width: '100%' }}
+        >
+          <Button
+            type="primary"
+            block
+            onClick={() =>
+              navigate(
+                `/verify-otp?token=${encodeURIComponent(
+                  registeredToken
+                )}`
+              )
+            }
+          >
+            Verify via OTP
+          </Button>
+          <Button
+            block
+            onClick={() =>
+              navigate(
+                `/verify-link?token=${encodeURIComponent(
+                  registeredToken
+                )}`
+              )
+            }
+          >
+            Verify via Link
+          </Button>
+        </Space>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -95,7 +177,6 @@ const Register: React.FC = () => {
       }}
     >
       <Card
-        variant="borderless"                    
         style={{
           backgroundColor: '#e8f9fd',
           width: 400,
@@ -103,17 +184,45 @@ const Register: React.FC = () => {
           boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
         }}
       >
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          <Title level={3} style={{ textAlign: 'center', margin: 0 }}>
+        <Space
+          direction="vertical"
+          size="large"
+          style={{ width: '100%' }}
+        >
+          <Title
+            level={3}
+            style={{
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
             Create Your Account
           </Title>
 
-          <form onSubmit={handleSubmit(onManualRegister)} autoComplete="off">
-            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          {registrationState === 'error' && (
+            <Alert
+              type="error"
+              message={errorMessage}
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          )}
+
+          <form
+            onSubmit={handleSubmit(onManualRegister)}
+            autoComplete="off"
+          >
+            <Space
+              direction="vertical"
+              size="middle"
+              style={{ width: '100%' }}
+            >
               <Controller
                 name="name"
                 control={control}
-                rules={{ required: 'Name is required' }}
+                rules={{
+                  required: 'Name is required',
+                }}
                 render={({ field }) => (
                   <Input
                     {...field}
@@ -125,7 +234,9 @@ const Register: React.FC = () => {
                 )}
               />
               {errors.name && (
-                <Text type="danger">{errors.name.message}</Text>
+                <Text type="danger">
+                  {errors.name.message}
+                </Text>
               )}
 
               <Controller
@@ -149,7 +260,9 @@ const Register: React.FC = () => {
                 )}
               />
               {errors.email && (
-                <Text type="danger">{errors.email.message}</Text>
+                <Text type="danger">
+                  {errors.email.message}
+                </Text>
               )}
 
               <Controller
@@ -157,7 +270,10 @@ const Register: React.FC = () => {
                 control={control}
                 rules={{
                   required: 'Password is required',
-                  minLength: { value: 8, message: 'Minimum 8 characters' },
+                  minLength: {
+                    value: 8,
+                    message: 'Minimum 8 characters',
+                  },
                 }}
                 render={({ field }) => (
                   <Input.Password
@@ -170,7 +286,9 @@ const Register: React.FC = () => {
                 )}
               />
               {errors.password && (
-                <Text type="danger">{errors.password.message}</Text>
+                <Text type="danger">
+                  {errors.password.message}
+                </Text>
               )}
 
               <Controller
@@ -179,7 +297,8 @@ const Register: React.FC = () => {
                 rules={{
                   required: 'Please confirm password',
                   validate: (val) =>
-                    val === watch('password') || 'Passwords do not match',
+                    val === watch('password') ||
+                    'Passwords do not match',
                 }}
                 render={({ field }) => (
                   <Input.Password
@@ -192,7 +311,9 @@ const Register: React.FC = () => {
                 )}
               />
               {errors.confirmPassword && (
-                <Text type="danger">{errors.confirmPassword.message}</Text>
+                <Text type="danger">
+                  {errors.confirmPassword.message}
+                </Text>
               )}
 
               <Button
@@ -200,7 +321,10 @@ const Register: React.FC = () => {
                 htmlType="submit"
                 block
                 loading={isSubmitting}
-                style={{ padding: '20px', borderRadius: '15px' }}
+                style={{
+                  padding: '20px',
+                  borderRadius: '15px',
+                }}
               >
                 Register
               </Button>
@@ -208,22 +332,31 @@ const Register: React.FC = () => {
           </form>
 
           <Divider>Or Sign up with Google</Divider>
+
           <div style={{ textAlign: 'center' }}>
             <GoogleLogin
               onSuccess={onGoogleRegister}
-              onError={() => message.error('Google sign‑up failed')}
+              onError={() =>
+                message.error('Google sign-up failed')
+              }
             />
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: 12,
+            }}
+          >
             <Text>
-              Already have an account? <Link to="/login">Log In</Link>
+              Already have an account?{' '}
+              <Link to="/login">Log In</Link>
             </Text>
           </div>
         </Space>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default Register;
+export default Register

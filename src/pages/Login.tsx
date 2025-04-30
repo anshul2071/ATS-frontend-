@@ -1,6 +1,7 @@
 // src/pages/Login.tsx
-import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+
+import React, { useState } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import {
   Card,
   Input,
@@ -9,83 +10,93 @@ import {
   message,
   Divider,
   Space,
-  theme,
   Modal,
   Form,
-} from 'antd';
-import { MailOutlined, LockOutlined } from '@ant-design/icons';
-import { GoogleLogin } from '@react-oauth/google';
-import { Link, useNavigate } from 'react-router-dom';
-import axiosInstance from '../services/axiosInstance';
-import { useAppDispatch } from '../store/hooks';
-import { setCredentials } from '../store/userSlice';
+} from 'antd'
+import { MailOutlined, LockOutlined } from '@ant-design/icons'
+import { GoogleLogin } from '@react-oauth/google'
+import { Link, useNavigate } from 'react-router-dom'
+import axiosInstance from '../services/axiosInstance'
+import { useAppDispatch } from '../store/hooks'
 import auth from '../assests/auth.jpg'
+import { setCredentials } from '../store/userSlice'
 
-const { Title, Text } = Typography;
+const { Title, Text } = Typography
 
 interface FormInputs {
-  email: string;
-  password: string;
+  email: string
+  password: string
 }
 
 interface ForgotInputs {
-  email: string;
+  email: string
 }
 
 const Login: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const { token } = theme.useToken();
+  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const [forgotVisible, setForgotVisible] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotForm] = Form.useForm<ForgotInputs>()
 
- 
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormInputs>({ defaultValues: { email: '', password: '' } });
-
-  const [forgotVisible, setForgotVisible] = useState(false);
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotForm] = Form.useForm<ForgotInputs>();
+  } = useForm<FormInputs>({
+    defaultValues: { email: '', password: '' },
+  })
 
   const onSubmit = async (data: FormInputs) => {
     try {
-      const res = await axiosInstance.post('/auth/login', data);
-      dispatch(setCredentials({ token: res.data.token, email: res.data.email }));
-      message.success('Logged in successfully');
-      navigate('/');
+      const res = await axiosInstance.post('/auth/login', data)
+      dispatch(
+        setCredentials({ token: res.data.token, email: res.data.email })
+      )
+      message.success('Logged in successfully')
+      navigate('/')
     } catch (err: any) {
-      const status = err.response?.status;
-      if (status === 404) message.error('Email not registered');
-      else if (status === 401) message.error('Incorrect password');
-      else message.error('Login failed');
+      // Always show the server-returned message (fallback if missing)
+      const serverMsg =
+        err.response?.data?.message || 'Login failed, please try again'
+      message.error(serverMsg)
     }
-  };
+  }
 
   const handleGoogle = async (resp: any) => {
     try {
-      const res = await axiosInstance.post('/auth/google', { credential: resp.credential });
-      dispatch(setCredentials({ token: res.data.token, email: res.data.email }));
-      message.success(`Logged in as ${res.data.email}`);
-      navigate('/');
-    } catch {
-      message.error('Google login failed');
+      const res = await axiosInstance.post('/auth/google', {
+        credential: resp.credential,
+      })
+      dispatch(
+        setCredentials({ token: res.data.token, email: res.data.email })
+      )
+      message.success(`Logged in as ${res.data.email}`)
+      navigate('/')
+    } catch (err: any) {
+      const serverMsg =
+        err.response?.data?.message || 'Google login failed'
+      message.error(serverMsg)
     }
-  };
+  }
 
   const handleForgot = async (vals: ForgotInputs) => {
-    setForgotLoading(true);
+    setForgotLoading(true)
     try {
-      await axiosInstance.post('/auth/forgot-password', { email: vals.email });
-      message.success('If that email exists, a reset link has been sent.');
-      setForgotVisible(false);
-      forgotForm.resetFields();
-    } catch {
-      message.error('Failed to send reset email');
+      const res = await axiosInstance.post('/auth/forgot-password', {
+        email: vals.email,
+      })
+      message.success(res.data.message)
+      setForgotVisible(false)
+      forgotForm.resetFields()
+    } catch (err: any) {
+      const serverMsg =
+        err.response?.data?.message || 'Failed to send reset email'
+      message.error(serverMsg)
     } finally {
-      setForgotLoading(false);
+      setForgotLoading(false)
     }
-  };
+  }
 
   return (
     <>
@@ -95,18 +106,17 @@ const Login: React.FC = () => {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
+          padding: 16,
           backgroundImage: `url(${auth})`,
           backgroundSize: 'cover',
-          padding: 16,
         }}
       >
         <Card
           style={{
-            backgroundColor: '#e8f9fd',
             width: 360,
             borderRadius: '20px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
             padding: '24px',
+            backgroundColor: '#e8f9fd',
           }}
         >
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -114,9 +124,12 @@ const Login: React.FC = () => {
               Welcome Back
             </Title>
 
-            {/* Login Form */}
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-              <Space direction="vertical" size="large" style={{ width: '100%', marginTop: '1rem' }}>
+              <Space
+                direction="vertical"
+                size="middle"
+                style={{ width: '100%' }}
+              >
                 <Controller
                   name="email"
                   control={control}
@@ -129,14 +142,16 @@ const Login: React.FC = () => {
                   }}
                   render={({ field }) => (
                     <Input
-                     {...field}
+                      {...field}
                       size="large"
                       prefix={<MailOutlined />}
                       placeholder="Email"
                     />
                   )}
                 />
-                {errors.email && <Text type="danger">{errors.email.message}</Text>}
+                {errors.email && (
+                  <Text type="danger">{errors.email.message}</Text>
+                )}
 
                 <Controller
                   name="password"
@@ -144,21 +159,19 @@ const Login: React.FC = () => {
                   rules={{ required: 'Password required' }}
                   render={({ field }) => (
                     <Input.Password
-                    {...field}
+                      {...field}
                       size="large"
                       prefix={<LockOutlined />}
                       placeholder="Password"
                     />
                   )}
                 />
-                {errors.password && <Text type="danger">{errors.password.message}</Text>}
+                {errors.password && (
+                  <Text type="danger">{errors.password.message}</Text>
+                )}
 
-                {/* Forgot Password Link */}
-                <div style={{ textAlign: 'right', marginTop: -8 }}>
-                  <a
-                    onClick={() => setForgotVisible(true)}
-                    style={{ color: token.colorPrimary, cursor: 'pointer', fontSize: 12 }}
-                  >
+                <div style={{ textAlign: 'right' }}>
+                  <a onClick={() => setForgotVisible(true)}>
                     Forgot password?
                   </a>
                 </div>
@@ -169,11 +182,7 @@ const Login: React.FC = () => {
                   block
                   size="large"
                   loading={isSubmitting}
-                  style={{
-                    padding: '20px',
-                    background: '#1890ff',
-                    borderRadius: '15px',
-                  }}
+                  style={{ borderRadius: '15px', padding: '20px' }}
                 >
                   Log In
                 </Button>
@@ -183,22 +192,21 @@ const Login: React.FC = () => {
             <Divider>Or login with</Divider>
 
             <div style={{ textAlign: 'center' }}>
-              <GoogleLogin onSuccess={handleGoogle} onError={() => message.error('Google login failed')} />
+              <GoogleLogin
+                onSuccess={handleGoogle}
+                onError={() => message.error('Google login failed')}
+              />
             </div>
 
             <div style={{ textAlign: 'center', marginTop: 12 }}>
               <Text>
-                Don’t have an account?{' '}
-                <Link style={{ transition: 'color 0.3s', color: token.colorPrimary }} to="/register">
-                  Register
-                </Link>
+                Don’t have an account? <Link to="/register">Register</Link>
               </Text>
             </div>
           </Space>
         </Card>
       </div>
 
-      {/* Forgot Password Modal */}
       <Modal
         title="Reset Password"
         open={forgotVisible}
@@ -215,7 +223,11 @@ const Login: React.FC = () => {
               { type: 'email', message: 'Invalid email format' },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="Email" size="large" />
+            <Input
+              size="large"
+              prefix={<MailOutlined />}
+              placeholder="Email"
+            />
           </Form.Item>
           <Form.Item>
             <Button
@@ -231,7 +243,7 @@ const Login: React.FC = () => {
         </Form>
       </Modal>
     </>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login
