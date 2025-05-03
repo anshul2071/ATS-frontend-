@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { Card, Form, Select, DatePicker, Button, message, Spin } from 'antd'
 import axiosInstance from '../services/axiosInstance'
+import type { Moment } from 'moment'
+
+export const PIPELINE_STAGES = [
+  'HR Screening',
+  'Technical Interview',
+  'Managerial Interview',
+] as const
+export type PipelineStage = typeof PIPELINE_STAGES[number]
 
 interface Candidate {
   _id: string
@@ -8,15 +16,15 @@ interface Candidate {
   email: string
 }
 
-const pipelineStages = [
-  'HR Screening',
-  'Technical Interview',
-  'Managerial Interview',
-  'Final Interview',
-]
+interface FormValues {
+  candidateId: string
+  pipelineStage: PipelineStage
+  interviewer: string
+  date: Moment
+}
 
 export default function InterviewSchedule() {
-  const [form] = Form.useForm()
+  const [form] = Form.useForm<FormValues>()
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -30,19 +38,19 @@ export default function InterviewSchedule() {
       .finally(() => setLoading(false))
   }, [])
 
-  const onFinish = async (vals: any) => {
+  const onFinish = async (vals: FormValues) => {
     setSubmitting(true)
     try {
       await axiosInstance.post('/interviews', {
-        candidate:   vals.candidateId,
-        round:       vals.round,
+        candidate: vals.candidateId,
+        pipelineStage: vals.pipelineStage,
         interviewer: vals.interviewer,
-        date:        vals.date.toISOString(),
+        date: vals.date.toISOString(),
       })
       message.success('Interview scheduled successfully')
       form.resetFields()
-    } catch {
-      message.error('Interview scheduling failed')
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Interview scheduling failed')
     } finally {
       setSubmitting(false)
     }
@@ -70,14 +78,14 @@ export default function InterviewSchedule() {
         </Form.Item>
 
         <Form.Item
-          name="round"
+          name="pipelineStage"
           label="Pipeline Stage"
           rules={[{ required: true, message: 'Please select a pipeline stage' }]}
         >
-          <Select placeholder="Select pipeline stage">
-            {pipelineStages.map((s) => (
-              <Select.Option key={s} value={s}>
-                {s}
+          <Select<PipelineStage> placeholder="Select pipeline stage">
+            {PIPELINE_STAGES.map((stage) => (
+              <Select.Option key={stage} value={stage}>
+                {stage}
               </Select.Option>
             ))}
           </Select>
@@ -112,4 +120,3 @@ export default function InterviewSchedule() {
     </Card>
   )
 }
-

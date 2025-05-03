@@ -1,20 +1,23 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import { BrowserRouter } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import { store } from './store';
-import 'antd/dist/reset.css';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { Provider } from 'react-redux'
+import { BrowserRouter } from 'react-router-dom'
+import { GoogleOAuthProvider } from '@react-oauth/google'
+import App from './App'
+import { store } from './store'
+import 'antd/dist/reset.css'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
+
+const root = document.getElementById('root') as HTMLElement
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <Provider store={store}>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <GoogleOAuthProvider clientId={googleClientId}>
         <BrowserRouter>
           <App />
         </BrowserRouter>
       </GoogleOAuthProvider>
     </Provider>
   </React.StrictMode>
-);
+)

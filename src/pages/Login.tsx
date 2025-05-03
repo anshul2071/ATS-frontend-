@@ -1,5 +1,4 @@
 // src/pages/Login.tsx
-
 import React, { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import {
@@ -14,12 +13,13 @@ import {
   Form,
 } from 'antd'
 import { MailOutlined, LockOutlined } from '@ant-design/icons'
-import { GoogleLogin } from '@react-oauth/google'
+import { GoogleLogin, CredentialResponse } from '@react-oauth/google'
 import { Link, useNavigate } from 'react-router-dom'
 import axiosInstance from '../services/axiosInstance'
 import { useAppDispatch } from '../store/hooks'
-import auth from '../assests/auth.jpg'
 import { setCredentials } from '../store/userSlice'
+import GoogleOneTap from '../components/GoogleOneTap'
+import auth from '../assests/auth.jpg'
 
 const { Title, Text } = Typography
 
@@ -35,6 +35,7 @@ interface ForgotInputs {
 const Login: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+
   const [forgotVisible, setForgotVisible] = useState(false)
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotForm] = Form.useForm<ForgotInputs>()
@@ -43,56 +44,54 @@ const Login: React.FC = () => {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormInputs>({
-    defaultValues: { email: '', password: '' },
-  })
+  } = useForm<FormInputs>({ defaultValues: { email: '', password: '' } })
 
+  // email/password login
   const onSubmit = async (data: FormInputs) => {
     try {
       const res = await axiosInstance.post('/auth/login', data)
-      dispatch(
-        setCredentials({ token: res.data.token, email: res.data.email })
-      )
+      dispatch(setCredentials({ token: res.data.token, email: res.data.email }))
       message.success('Logged in successfully')
       navigate('/')
     } catch (err: any) {
-      // Always show the server-returned message (fallback if missing)
-      const serverMsg =
-        err.response?.data?.message || 'Login failed, please try again'
-      message.error(serverMsg)
+      message.error(err.response?.data?.message || 'Login failed, please try again')
     }
   }
 
-  const handleGoogle = async (resp: any) => {
+  // Google “Sign in with Google” button
+  const handleGoogle = async (resp: CredentialResponse) => {
     try {
-      const res = await axiosInstance.post('/auth/google', {
-        credential: resp.credential,
-      })
-      dispatch(
-        setCredentials({ token: res.data.token, email: res.data.email })
-      )
+      const res = await axiosInstance.post('/auth/google', { credential: resp.credential })
+      dispatch(setCredentials({ token: res.data.token, email: res.data.email }))
       message.success(`Logged in as ${res.data.email}`)
       navigate('/')
-    } catch (err: any) {
-      const serverMsg =
-        err.response?.data?.message || 'Google login failed'
-      message.error(serverMsg)
+    } catch {
+      message.error('Google login failed')
     }
   }
 
+  // Google One-Tap callback
+  const handleGoogleOneTap = async (resp: CredentialResponse) => {
+    try {
+      const res = await axiosInstance.post('/auth/google-onetap', { credential: resp.credential })
+      dispatch(setCredentials({ token: res.data.token, email: res.data.email }))
+      message.success(`Logged in as ${res.data.email}`)
+      navigate('/')
+    } catch {
+      message.error('Google One-Tap login failed')
+    }
+  }
+
+  // forgot-password flow
   const handleForgot = async (vals: ForgotInputs) => {
     setForgotLoading(true)
     try {
-      const res = await axiosInstance.post('/auth/forgot-password', {
-        email: vals.email,
-      })
+      const res = await axiosInstance.post('/auth/forgot-password', { email: vals.email })
       message.success(res.data.message)
       setForgotVisible(false)
       forgotForm.resetFields()
-    } catch (err: any) {
-      const serverMsg =
-        err.response?.data?.message || 'Failed to send reset email'
-      message.error(serverMsg)
+    } catch {
+      message.error('Failed to send reset email')
     } finally {
       setForgotLoading(false)
     }
@@ -100,6 +99,9 @@ const Login: React.FC = () => {
 
   return (
     <>
+      {/* Inject Google One-Tap prompt */}
+      <GoogleOneTap onSuccess={handleGoogleOneTap} onError={(err) => message.error(err.message)} />
+
       <div
         style={{
           display: 'flex',
@@ -111,25 +113,12 @@ const Login: React.FC = () => {
           backgroundSize: 'cover',
         }}
       >
-        <Card
-          style={{
-            width: 360,
-            borderRadius: '20px',
-            padding: '24px',
-            backgroundColor: '#e8f9fd',
-          }}
-        >
+        <Card style={{ width: 360, borderRadius: 20, padding: 24, backgroundColor: '#e8f9fd' }}>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            <Title level={3} style={{ textAlign: 'center', margin: 0 }}>
-              Welcome Back
-            </Title>
+            <Title level={3}>Welcome Back</Title>
 
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-              <Space
-                direction="vertical"
-                size="middle"
-                style={{ width: '100%' }}
-              >
+              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                 <Controller
                   name="email"
                   control={control}
@@ -141,49 +130,26 @@ const Login: React.FC = () => {
                     },
                   }}
                   render={({ field }) => (
-                    <Input
-                      {...field}
-                      size="large"
-                      prefix={<MailOutlined />}
-                      placeholder="Email"
-                    />
+                    <Input {...field} size="large" prefix={<MailOutlined />} placeholder="Email" />
                   )}
                 />
-                {errors.email && (
-                  <Text type="danger">{errors.email.message}</Text>
-                )}
+                {errors.email && <Text type="danger">{errors.email.message}</Text>}
 
                 <Controller
                   name="password"
                   control={control}
                   rules={{ required: 'Password required' }}
                   render={({ field }) => (
-                    <Input.Password
-                      {...field}
-                      size="large"
-                      prefix={<LockOutlined />}
-                      placeholder="Password"
-                    />
+                    <Input.Password {...field} size="large" prefix={<LockOutlined />} placeholder="Password" />
                   )}
                 />
-                {errors.password && (
-                  <Text type="danger">{errors.password.message}</Text>
-                )}
+                {errors.password && <Text type="danger">{errors.password.message}</Text>}
 
                 <div style={{ textAlign: 'right' }}>
-                  <a onClick={() => setForgotVisible(true)}>
-                    Forgot password?
-                  </a>
+                  <a onClick={() => setForgotVisible(true)}>Forgot password?</a>
                 </div>
 
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  block
-                  size="large"
-                  loading={isSubmitting}
-                  style={{ borderRadius: '15px', padding: '20px' }}
-                >
+                <Button type="primary" htmlType="submit" block size="large" loading={isSubmitting}>
                   Log In
                 </Button>
               </Space>
@@ -192,28 +158,17 @@ const Login: React.FC = () => {
             <Divider>Or login with</Divider>
 
             <div style={{ textAlign: 'center' }}>
-              <GoogleLogin
-                onSuccess={handleGoogle}
-                onError={() => message.error('Google login failed')}
-              />
+              <GoogleLogin onSuccess={handleGoogle} onError={() => message.error('Google login failed')} />
             </div>
 
             <div style={{ textAlign: 'center', marginTop: 12 }}>
-              <Text>
-                Don’t have an account? <Link to="/register">Register</Link>
-              </Text>
+              <Text>Don’t have an account? <Link to="/register">Register</Link></Text>
             </div>
           </Space>
         </Card>
       </div>
 
-      <Modal
-        title="Reset Password"
-        open={forgotVisible}
-        onCancel={() => setForgotVisible(false)}
-        footer={null}
-        destroyOnClose
-      >
+      <Modal open={forgotVisible} onCancel={() => setForgotVisible(false)} footer={null} destroyOnClose>
         <Form form={forgotForm} onFinish={handleForgot} layout="vertical">
           <Form.Item
             label="Enter your email"
@@ -223,20 +178,10 @@ const Login: React.FC = () => {
               { type: 'email', message: 'Invalid email format' },
             ]}
           >
-            <Input
-              size="large"
-              prefix={<MailOutlined />}
-              placeholder="Email"
-            />
+            <Input size="large" prefix={<MailOutlined />} placeholder="Email" />
           </Form.Item>
           <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              loading={forgotLoading}
-              style={{ borderRadius: '8px' }}
-            >
+            <Button type="primary" htmlType="submit" block loading={forgotLoading}>
               Send Reset Link
             </Button>
           </Form.Item>

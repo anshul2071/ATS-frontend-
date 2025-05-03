@@ -64,9 +64,9 @@ const CandidateList: React.FC = () => {
             onChange={(v) => setFilters((f) => ({ ...f, status: v }))}
           >
             <Select.Option value="Shortlisted">Shortlisted</Select.Option>
-            <Select.Option value="First Interview">First Interview</Select.Option>
-            <Select.Option value="Second Interview">Second Interview</Select.Option>
-            <Select.Option value="Third Interview">Third Interview</Select.Option>
+            <Select.Option value="First Interview">HR Screening</Select.Option>
+            <Select.Option value="Second Interview">Tech Interview</Select.Option>
+            <Select.Option value="Third Interview">Managerial Interview</Select.Option>
             <Select.Option value="Hired">Hired</Select.Option>
             <Select.Option value="Rejected">Rejected</Select.Option>
             <Select.Option value="Blacklisted">Blacklisted</Select.Option>

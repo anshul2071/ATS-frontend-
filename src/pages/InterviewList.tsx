@@ -71,17 +71,12 @@ export default function InterviewList() {
 
   const filtered = useMemo(() => {
     return interviews.filter(i => {
-      // name filter
-      if (
-        !i.candidate.name.toLowerCase().includes(searchName.toLowerCase())
-      ) {
+      if (!i.candidate || !i.candidate.name.toLowerCase().includes(searchName.toLowerCase())) {
         return false
       }
-      // stage filter
       if (stageFilter && i.round !== stageFilter) {
         return false
       }
-      // date range filter
       if (dateRange) {
         const d = dayjs(i.date)
         if (d.isBefore(dateRange[0], 'day') || d.isAfter(dateRange[1], 'day')) {

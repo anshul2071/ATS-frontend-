@@ -17,9 +17,9 @@ interface CandidateCardProps {
 
 const statusColors: Record<string, string> = {
   Shortlisted: 'green',
-  'First Interview': 'blue',
-  'Second Interview': 'purple',
-  'Third Interview': 'orange',
+  'HR Screening': 'blue',
+  'Technical Interview': 'purple',
+  'Managerial Interview': 'cyan',
   Hired: 'gold',
   Rejected: 'red',
   Blacklisted: 'default',

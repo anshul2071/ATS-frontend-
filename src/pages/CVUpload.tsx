@@ -113,6 +113,8 @@ const CVUpload: React.FC = () => {
                 <Select.Option value="React Js">React Js</Select.Option>
                 <Select.Option value="DevOps">DevOps</Select.Option>
                 <Select.Option value="QA">QA</Select.Option>
+                <Select.Option value="Java">Java</Select.Option>
+                <Select.Option value="Python">Python</Select.Option>
                 <Select.Option value="UI/UX Designer">UI/UX Designer</Select.Option>
               </Select>
             </Form.Item>

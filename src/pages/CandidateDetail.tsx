@@ -1,6 +1,7 @@
 // src/pages/CandidateDetail.tsx
+
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Tabs,
   Spin,
@@ -13,15 +14,17 @@ import {
   Table,
   Upload,
   message,
+  Modal,
   Space,
   Typography,
 } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
+import type { UploadProps } from 'antd'
 import axiosInstance from '../services/axiosInstance'
 import ResumeParser, { ResumeSummary } from '../components/ResumeParser'
-import type { UploadProps } from 'antd'
-import type { UploadRequestOption } from 'rc-upload/lib/interface'
-import { getOffers, sendOffer, Offer as ApiOffer } from '../services/offerService'
+import type { Offer as ApiOffer } from '../services/offerService'
+import { getOffers, sendOffer } from '../services/offerService'
+import { PIPELINE_STAGES } from '../constants/pipelineStages'
 
 const { Text } = Typography
 
@@ -49,13 +52,13 @@ interface CandidateType {
   parserSummary?: ResumeSummary
 }
 
-export default function CandidateDetail() {
+const CandidateDetail: React.FC = () => {
   const { id: candidateId } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [candidate, setCandidate] = useState<CandidateType | null>(null)
   const [offers, setOffers] = useState<ApiOffer[]>([])
   const [editing, setEditing] = useState(false)
-
   const [infoForm] = Form.useForm()
   const [assessForm] = Form.useForm()
   const [offerForm] = Form.useForm()
@@ -96,14 +99,16 @@ export default function CandidateDetail() {
   }, [candidateId, infoForm])
 
   if (loading || !candidate) {
-    return <div style={{ textAlign: 'center', marginTop: 100 }}><Spin size="large" /></div>
+    return (
+      <div style={{ textAlign: 'center', marginTop: 100 }}>
+        <Spin size="large" />
+      </div>
+    )
   }
 
   const saveInfo = async (vals: any) => {
     try {
-      const { data } = await axiosInstance.put<CandidateType>(
-        `/candidates/${candidateId}`, vals
-      )
+      const { data } = await axiosInstance.put<CandidateType>(`/candidates/${candidateId}`, vals)
       setCandidate(data)
       setEditing(false)
       message.success('Info updated')
@@ -129,7 +134,7 @@ export default function CandidateDetail() {
       return ok
     },
     maxCount: 1,
-    customRequest: (options: UploadRequestOption<any>) => {
+    customRequest: (options: any) => {
       const { onSuccess } = options
       setTimeout(() => onSuccess && onSuccess('ok'), 0)
     },
@@ -143,7 +148,8 @@ export default function CandidateDetail() {
       fd.append('remarks', vals.remarks || '')
       fd.append('file', vals.file.file.originFileObj)
       const { data } = await axiosInstance.post<CandidateType>(
-        `/candidates/${candidateId}/assessment`, fd,
+        `/candidates/${candidateId}/assessment`,
+        fd,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       )
       setCandidate(data)
@@ -168,6 +174,24 @@ export default function CandidateDetail() {
     }
   }
 
+  const handleDeleteCandidate = () => {
+    Modal.confirm({
+      title: 'Confirm Deletion',
+      content: 'Are you sure you want to delete this candidate?',
+      okText: 'Yes',
+      cancelText: 'No',
+      onOk: async () => {
+        try {
+          await axiosInstance.delete(`/candidates/${candidateId}`)
+          message.success('Candidate deleted successfully')
+          navigate('/candidates')
+        } catch {
+          message.error('Failed to delete candidate')
+        }
+      },
+    })
+  }
+
   const sendBackground = async (vals: any) => {
     try {
       await axiosInstance.post(`/candidates/${candidateId}/background`, vals)
@@ -184,44 +208,94 @@ export default function CandidateDetail() {
       label: 'Info',
       children: (
         <Card
-          extra={editing
-            ? <Space><Button onClick={() => setEditing(false)}>Cancel</Button><Button type="primary" onClick={() => infoForm.submit()}>Save</Button></Space>
-            : <Button onClick={() => setEditing(true)}>Edit</Button>
+          title={
+            <Space>
+              <Text strong>{candidate.name}</Text>
+              <Button type="primary" danger onClick={handleDeleteCandidate}>
+                Delete
+              </Button>
+            </Space>
+          }
+          extra={
+            editing ? (
+              <Space>
+                <Button onClick={() => setEditing(false)}>Cancel</Button>
+                <Button type="primary" onClick={() => infoForm.submit()}>
+                  Save
+                </Button>
+              </Space>
+            ) : (
+              <Button onClick={() => setEditing(true)}>Edit</Button>
+            )
           }
         >
-          {editing
-            ? <Form form={infoForm} layout="vertical" onFinish={saveInfo}>
-                <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input/></Form.Item>
-                <Form.Item name="phone" label="Phone"><Input/></Form.Item>
-                <Form.Item name="references" label="References"><Input.TextArea rows={2}/></Form.Item>
-                <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
-                  <Select>{['Dot Net','React JS','DevOps','QA'].map(t => <Select.Option key={t} value={t}>{t}</Select.Option>)}</Select>
-                </Form.Item>
-                <Form.Item name="level" label="Level">
-                  <Select>{['Junior','Mid','Senior'].map(l => <Select.Option key={l} value={l}>{l}</Select.Option>)}</Select>
-                </Form.Item>
-                <Form.Item name="salaryExpectation" label="Salary Expectation"><InputNumber style={{width:'100%'}}/></Form.Item>
-                <Form.Item name="experience" label="Experience (yrs)"><InputNumber style={{width:'100%'}}/></Form.Item>
-              </Form>
-            : <>
-                <Text strong>Name:</Text> {candidate.name}<br/>
-                <Text strong>Email:</Text> {candidate.email}<br/>
-                <Text strong>Phone:</Text> {candidate.phone||'—'}<br/>
-                <Text strong>References:</Text> {candidate.references||'—'}<br/>
-                <Text strong>Tech:</Text> {candidate.technology}<br/>
-                <Text strong>Level:</Text> {candidate.level}<br/>
-                <Text strong>Salary:</Text> ${candidate.salaryExpectation||0}<br/>
-                <Text strong>Experience:</Text> {candidate.experience||0} yrs<br/>
-                <Space style={{marginTop:8}}>
-                  <Text strong>Status:</Text>
-                  <Select value={candidate.status} onChange={changeStatus} style={{width:200}}>
-                    {['Shortlisted','First Interview','Second Interview','Hired','Rejected','Blacklisted']
-                      .map(s => <Select.Option key={s} value={s}>{s}</Select.Option>)}
-                  </Select>
-                </Space>
-                {candidate.parserSummary && <ResumeParser summary={candidate.parserSummary}/>}
-              </>
-          }
+          {editing ? (
+            <Form form={infoForm} layout="vertical" onFinish={saveInfo}>
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="phone" label="Phone">
+                <Input />
+              </Form.Item>
+              <Form.Item name="references" label="References">
+                <Input.TextArea rows={2} />
+              </Form.Item>
+              <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
+                <Select>
+                  {['Dot Net', 'React JS', 'DevOps', 'QA', 'Java', 'Python', 'UI/UX Designer'].map(t => (
+                    <Select.Option key={t} value={t}>
+                      {t}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item name="level" label="Level">
+                <Select>
+                  {['Junior', 'Mid', 'Senior'].map(l => (
+                    <Select.Option key={l} value={l}>
+                      {l}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item name="salaryExpectation" label="Salary Expectation">
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="experience" label="Experience (yrs)">
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+            </Form>
+          ) : (
+            <>
+              <Text strong>Name:</Text> {candidate.name}
+              <br />
+              <Text strong>Email:</Text> {candidate.email}
+              <br />
+              <Text strong>Phone:</Text> {candidate.phone || '—'}
+              <br />
+              <Text strong>References:</Text> {candidate.references || '—'}
+              <br />
+              <Text strong>Tech:</Text> {candidate.technology}
+              <br />
+              <Text strong>Level:</Text> {candidate.level}
+              <br />
+              <Text strong>Salary:</Text> ${candidate.salaryExpectation || 0}
+              <br />
+              <Text strong>Experience:</Text> {candidate.experience || 0} yrs
+              <br />
+              <Space style={{ marginTop: 8 }}>
+                <Text strong>Status:</Text>
+                <Select value={candidate.status} onChange={changeStatus} style={{ width: 200 }}>
+                  {PIPELINE_STAGES.map(s => (
+                    <Select.Option key={s} value={s}>
+                      {s}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Space>
+              {candidate.parserSummary && <ResumeParser summary={candidate.parserSummary} />}
+            </>
+          )}
         </Card>
       ),
     },
@@ -231,26 +305,46 @@ export default function CandidateDetail() {
       children: (
         <Card title="Assessment Records">
           <Form form={assessForm} layout="vertical" onFinish={addAssessment}>
-            <Form.Item name="title" label="Title" rules={[{ required: true }]}><Input/></Form.Item>
-            <Form.Item name="file" label="File" valuePropName="fileList" getValueFromEvent={e => e.fileList} rules={[{ required: true }]}>
-              <Upload {...uploadProps}><Button icon={<UploadOutlined/>}>Select File</Button></Upload>
+            <Form.Item name="title" label="Title" rules={[{ required: true }]}>
+              <Input />
             </Form.Item>
-            <Form.Item name="score" label="Score" rules={[{ required: true }]}><InputNumber min={0} max={100} style={{width:'100%'}}/></Form.Item>
-            <Form.Item name="remarks" label="Remarks"><Input.TextArea rows={2}/></Form.Item>
-            <Form.Item><Button type="primary" htmlType="submit">Add Assessment</Button></Form.Item>
+            <Form.Item name="file" label="File" valuePropName="fileList" getValueFromEvent={e => e.fileList} rules={[{ required: true }]}>
+              <Upload {...uploadProps}>
+                <Button icon={<UploadOutlined />}>Select File</Button>
+              </Upload>
+            </Form.Item>
+            <Form.Item name="score" label="Score" rules={[{ required: true }]}>
+              <InputNumber min={0} max={100} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="remarks" label="Remarks">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">
+                Add Assessment
+              </Button>
+            </Form.Item>
           </Form>
           <Table
             dataSource={candidate.assessments}
             rowKey="_id"
             columns={[
-              { title:'Title', dataIndex:'title', key:'title' },
-              { title:'Score', dataIndex:'score', key:'score' },
-              { title:'Remarks', dataIndex:'remarks', key:'remarks' },
-              { title:'Date', dataIndex:'createdAt', key:'createdAt' },
-              { title:'File', key:'file', render:(_,_r)=> <a href={(_r as Assessment).fileUrl} target="_blank" rel="noopener noreferrer">Download</a> }
+              { title: 'Title', dataIndex: 'title', key: 'title' },
+              { title: 'Score', dataIndex: 'score', key: 'score' },
+              { title: 'Remarks', dataIndex: 'remarks', key: 'remarks' },
+              { title: 'Date', dataIndex: 'createdAt', key: 'createdAt' },
+              {
+                title: 'File',
+                key: 'file',
+                render: (_: any, r: Assessment) => (
+                  <a href={r.fileUrl} target="_blank" rel="noopener noreferrer">
+                    Download
+                  </a>
+                ),
+              },
             ]}
             pagination={false}
-            style={{marginTop:16}}
+            style={{ marginTop: 16 }}
           />
         </Card>
       ),
@@ -268,20 +362,24 @@ export default function CandidateDetail() {
               </Select>
             </Form.Item>
             <Form.Item name="placeholders" label="Custom Fields">
-              <Input.TextArea rows={3} placeholder="e.g. {salary:60000}"/>
+              <Input.TextArea rows={3} placeholder="e.g. {salary:60000}" />
             </Form.Item>
-            <Form.Item><Button type="primary" htmlType="submit">Send Offer</Button></Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">
+                Send Offer
+              </Button>
+            </Form.Item>
           </Form>
           <Table
             dataSource={offers}
             rowKey="_id"
             columns={[
-              { title:'Date', dataIndex:'date', key:'date' },
-              { title:'Template', dataIndex:'template', key:'template' },
-              { title:'Sent To', dataIndex:'sentTo', key:'sentTo' }
+              { title: 'Date', dataIndex: 'date', key: 'date' },
+              { title: 'Template', dataIndex: 'template', key: 'template' },
+              { title: 'Sent To', dataIndex: 'sentTo', key: 'sentTo' },
             ]}
             pagination={false}
-            style={{marginTop:16}}
+            style={{ marginTop: 16 }}
           />
         </Card>
       ),
@@ -293,14 +391,20 @@ export default function CandidateDetail() {
         <Card title="Background Check">
           <Form form={bgForm} layout="vertical" onFinish={sendBackground}>
             <Form.Item name="refEmail" label="Reference Email" rules={[{ required: true, type: 'email' }]}>
-              <Input placeholder="reference@example.com"/>
+              <Input placeholder="reference@example.com" />
             </Form.Item>
-            <Form.Item><Button type="primary" htmlType="submit" block>Send Background Check</Button></Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block>
+                Send Background Check
+              </Button>
+            </Form.Item>
           </Form>
         </Card>
       ),
     },
   ]
 
-  return <Tabs defaultActiveKey="info" items={tabs}/>
+  return <Tabs defaultActiveKey="info" items={tabs} />
 }
+
+export default CandidateDetail
