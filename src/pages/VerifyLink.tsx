@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { Alert, Button, Spin, Typography, message } from 'antd'
+import { Card, Alert, Button, Spin, Typography, message } from 'antd'
 import axiosInstance from '../services/axiosInstance'
 
-const { Title, Paragraph } = Typography
+const { Title } = Typography
 
 const VerifyLink: React.FC = () => {
   const { search } = useLocation()
@@ -37,21 +37,28 @@ const VerifyLink: React.FC = () => {
   }, [search])
 
   return (
-    <div style={{ maxWidth: 400, margin: '5rem auto', textAlign: 'center' }}>
-      <Title level={3}>Email Verification</Title>
-      {status === 'loading' && (
-        <Spin tip="Verifying your email, please wait…" style={{ marginBottom: 24 }} />
-      )}
-      {(status === 'success' || status === 'error') && (
-        <Alert
-          type={status === 'success' ? 'success' : 'error'}
-          message={status === 'success' ? 'Success' : 'Error'}
-          description={feedback}
-          showIcon
-          style={{ marginBottom: 24, textAlign: 'left' }}
-        />
-      )}
-      <Paragraph>
+    <div style={{ maxWidth: 400, margin: '5rem auto' }}>
+      <Card>
+        <Title level={3} style={{ textAlign: 'center' }}>
+          Email Verification
+        </Title>
+
+        {status === 'loading' && (
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <Spin tip="Verifying your email, please wait…" />
+          </div>
+        )}
+
+        {(status === 'success' || status === 'error') && (
+          <Alert
+            type={status === 'success' ? 'success' : 'error'}
+            message={status === 'success' ? 'Success' : 'Error'}
+            description={feedback}
+            showIcon
+            style={{ marginBottom: 24 }}
+          />
+        )}
+
         {status === 'success' ? (
           <Link to="/login">
             <Button type="primary" block>
@@ -63,7 +70,7 @@ const VerifyLink: React.FC = () => {
             <Button block>Back to Register</Button>
           </Link>
         )}
-      </Paragraph>
+      </Card>
     </div>
   )
 }

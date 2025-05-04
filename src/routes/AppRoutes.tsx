@@ -14,21 +14,38 @@ import InterviewSchedule from '../pages/InterviewSchedule'
 import Assessment from '../pages/Assessment'
 import Offer from '../pages/Offer'
 import SectionCustomization from '../pages/SectionCustomization'
-// import Collaboration from '../pages/Collaboration'
+import Home from '../pages/Home'
 import InterviewList from '../pages/InterviewList'
+import ResetPassword from '../pages/ResetPassword'
+import Settings from '../pages/Settings'
 
 const AppRoutes: React.FC = () => {
-  const token = useAppSelector(s => s.user.token)
+  const token = useAppSelector((state) => state.user.token)
 
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      {/* Public Routes */}
+      <Route
+        path="/"
+        element={token ? <Navigate to="/dashboard" replace /> : <Home />}
+      />
+      <Route
+        path="/login"
+        element={token ? <Navigate to="/dashboard" replace /> : <Login />}
+      />
+      <Route
+        path="/register"
+        element={token ? <Navigate to="/dashboard" replace /> : <Register />}
+      />
       <Route path="/verify-link" element={<VerifyLink />} />
       <Route path="/verify-otp" element={<VerifyOtp />} />
-      {token ? (
+      <Route path="/reset-password" element={<ResetPassword />} />
+      
+
+      {/* Protected Routes */}
+      {token && (
         <Route element={<LayoutComponent />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<CVUpload />} />
           <Route path="/candidates" element={<CandidateList />} />
           <Route path="/candidates/:id" element={<CandidateDetail />} />
@@ -36,13 +53,16 @@ const AppRoutes: React.FC = () => {
           <Route path="/interviews" element={<InterviewList />} />
           <Route path="/assessments" element={<Assessment />} />
           <Route path="/offers" element={<Offer />} />
+          <Route path='/settings' element={<Settings />}/>
           <Route path="/custom-sections" element={<SectionCustomization />} />
-          {/* <Route path="/collaboration" element={<Collaboration />} /> */}
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-      ) : (
-        <Route path="*" element={<Navigate to="/login" replace />} />
       )}
+
+      {/* Catch-all route */}
+      <Route
+        path="*"
+        element={<Navigate to={token ? '/dashboard' : '/login'} replace />}
+      />
     </Routes>
   )
 }

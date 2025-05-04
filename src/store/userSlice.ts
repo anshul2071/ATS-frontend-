@@ -1,42 +1,48 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+// src/store/userSlice.ts
 
+import { createSlice, PayloadAction } from "@reduxjs/toolkit"
 
 interface UserState {
-    token: string | null;
-    email: string | null;
+  token: string | null
+  email: string | null
+  name: string | null
 }
 
 const initialState: UserState = {
-    token: localStorage.getItem('token'),
-    email: localStorage.getItem('email'),
-};
-
+  token: localStorage.getItem("token"),
+  email: localStorage.getItem("email"),
+  name:  localStorage.getItem("name"),
+}
 
 const userSlice = createSlice({
-    name: 'user',
-    initialState,
-    reducers : {
-        setCredentials(
-        state,
-        {payload} : PayloadAction<{token:string; email:string}> ) {
-            state.token = payload.token; 
-            state.email = payload.email;
+  name: "user",
+  initialState,
+  reducers: {
+    setCredentials(
+      state,
+      action: PayloadAction<{ token: string; email: string; name: string }>
+    ) {
+      const { token, email, name } = action.payload
+      state.token = token
+      state.email = email
+      state.name  = name
 
-            localStorage.setItem('token', payload.token);
-            localStorage.setItem('email', payload.email);
-        },
+      localStorage.setItem("token", token)
+      localStorage.setItem("email", email)
+      localStorage.setItem("name",  name)
+    },
 
-        logout(state) {
-            state.token = null;
-            state.email = null;
+    logout(state) {
+      state.token = null
+      state.email = null
+      state.name  = null
 
-            localStorage.removeItem('token');
-            localStorage.removeItem('email');
-        }
-    }
-});
-            
-export const { setCredentials, logout } = userSlice.actions;
+      localStorage.removeItem("token")
+      localStorage.removeItem("email")
+      localStorage.removeItem("name")
+    },
+  },
+})
 
-export default userSlice.reducer;
-        
+export const { setCredentials, logout } = userSlice.actions
+export default userSlice.reducer

@@ -1,48 +1,48 @@
-// src/components/GoogleOneTap.tsx
-import React, { useEffect } from 'react'
-import type {
-  CredentialResponse,
-  PromptMomentNotification,
-} from '@react-oauth/google'
-
-declare global {
-  interface Window { google?: any }
-}
+import { useEffect } from 'react';
 
 interface Props {
-  onSuccess: (res: CredentialResponse) => void
-  onError: (err: Error) => void
+  onSuccess: (res: { credential: string }) => void;
+  onError?: (err: any) => void;
 }
 
-export default function GoogleOneTap({ onSuccess, onError }: Props) {
+const GoogleOneTap = ({ onSuccess, onError }: Props) => {
   useEffect(() => {
-    const g = window.google
-    if (!g?.accounts?.id) {
-      onError(new Error('One-Tap library not loaded'))
-      return
-    }
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-    // clear any pending FedCM calls
-    g.accounts.id.cancel()
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
 
-    g.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: (c: any) => onSuccess({ credential: c.credential }),
-      context: 'use',
-      ux_mode: 'popup',
-      allowed_parent_origin: window.location.origin,
-    })
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response: any) => {
+            if (response.credential) {
+              onSuccess(response);
+            } else {
+              onError?.(new Error('No credential received'));
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false,
+        });
 
-    g.accounts.id.prompt((moment: PromptMomentNotification) => {
-      if (
-        moment.isNotDisplayed() ||
-        moment.isSkippedMoment() ||
-        moment.isDismissedMoment()
-      ) {
-        onError(new Error('One-Tap prompt not shown'))
+        window.google.accounts.id.prompt((notification: any) => {
+          console.log('[OneTap]', notification.getMomentType());
+
+        });
       }
-    })
-  }, [onSuccess, onError])
+    };
 
-  return null
-}
+    return () => {
+      window.google?.accounts.id.cancel();
+    };
+  }, []);
+
+  return null;
+};
+
+export default GoogleOneTap;
