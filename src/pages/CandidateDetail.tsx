@@ -1,7 +1,5 @@
 "use client"
 
-// src/pages/CandidateDetail.tsx
-
 import type React from "react"
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
@@ -18,6 +16,7 @@ import {
   Upload,
   message,
   Modal,
+  Alert,
   Space,
   Typography,
   Avatar,
@@ -47,6 +46,7 @@ import {
   DownloadOutlined,
   SendOutlined,
   SafetyCertificateOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons"
 import type { UploadProps } from "antd"
 import { motion, AnimatePresence } from "framer-motion"
@@ -157,6 +157,7 @@ const CandidateDetail: React.FC = () => {
   const [offerForm] = Form.useForm()
   const [bgForm] = Form.useForm()
   const [activeTab, setActiveTab] = useState("info")
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
 
   useEffect(() => {
     if (!candidateId) return
@@ -202,6 +203,8 @@ const CandidateDetail: React.FC = () => {
           height: "calc(100vh - 64px)",
           flexDirection: "column",
           gap: "16px",
+          maxWidth: 1200,
+          margin: "0 auto",
         }}
       >
         <Spin size="large" />
@@ -263,6 +266,9 @@ const CandidateDetail: React.FC = () => {
   }
 
   const addOffer = async (vals: any) => {
+    if (candidate?.status !== 'Hired') {
+      return message.error('Cannot send offer: candidate is not yet hired.')
+    }
     try {
       const updated = await sendOffer(candidateId!, {
         template: vals.template,
@@ -270,29 +276,25 @@ const CandidateDetail: React.FC = () => {
       })
       setOffers(updated)
       offerForm.resetFields()
-      message.success("Offer created & emailed to candidate")
+      message.success('Offer created & emailed to candidate')
     } catch {
-      message.error("Failed to send offer")
+      message.error('Failed to send offer')
     }
   }
-
   const handleDeleteCandidate = () => {
-    Modal.confirm({
-      title: "Confirm Deletion",
-      content: "Are you sure you want to delete this candidate? This action cannot be undone.",
-      okText: "Delete",
-      okButtonProps: { danger: true },
-      cancelText: "Cancel",
-      onOk: async () => {
-        try {
-          await axiosInstance.delete(`/candidates/${candidateId}`)
-          message.success("Candidate deleted successfully")
-          navigate("/candidates")
-        } catch {
-          message.error("Failed to delete candidate")
-        }
-      },
-    })
+    setDeleteModalVisible(true)
+  }
+
+  const confirmDelete = async () => {
+    try {
+      await axiosInstance.delete(`/candidates/${candidateId}`)
+      message.success("Candidate deleted successfully")
+      navigate("/candidates")
+    } catch {
+      message.error("Failed to delete candidate")
+    } finally {
+      setDeleteModalVisible(false)
+    }
   }
 
   const sendBackground = async (vals: any) => {
@@ -326,6 +328,7 @@ const CandidateDetail: React.FC = () => {
     return colors[hash % colors.length]
   }
 
+ 
   const renderInfoContent = () => (
     <AnimatePresence mode="wait">
       {editing ? (
@@ -741,112 +744,123 @@ const CandidateDetail: React.FC = () => {
         </motion.div>
       ),
     },
-    {
-      key: "offers",
-      label: (
-        <span>
-          <SendOutlined />
-          Offers
-        </span>
-      ),
-      children: (
-        <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-          <Card
-            title={
-              <Space>
-                <SendOutlined />
-                <span>Offer Management</span>
-                <Badge
-                  count={offers?.length || 0}
-                  style={{ backgroundColor: offers?.length ? "#1677ff" : "#d9d9d9" }}
-                />
-              </Space>
-            }
-            bordered={false}
-            className="offers-card"
-          >
-            <motion.div variants={itemVariants}>
-              <Card
-                type="inner"
-                title="Send New Offer"
-                style={{ marginBottom: 24 }}
-                bordered={false}
-                className="send-offer-form"
-              >
-                <Form form={offerForm} layout="vertical" onFinish={addOffer}>
-                  <Form.Item
-                    name="template"
-                    label="Offer Template"
-                    rules={[{ required: true, message: "Please select an offer template" }]}
-                  >
-                    <Select placeholder="Select offer template">
-                      <Select.Option value="Standard">Standard Offer</Select.Option>
-                      <Select.Option value="Contractor">Contractor Offer</Select.Option>
-                    </Select>
-                  </Form.Item>
+    // inside your `tabs` definition, replace the `offers` children with:
 
-                  <Form.Item name="placeholders" label="Custom Fields">
-                    <Input.TextArea
-                      rows={3}
-                      placeholder="e.g. {salary:60000}, {startDate:2023-06-01}"
-                      showCount
-                      maxLength={500}
-                    />
-                  </Form.Item>
+{
+  key: "offers",
+  label: (
+    <span>
+      <SendOutlined />
+      Offers
+    </span>
+  ),
+  children: (
+    <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+      <Card
+        title={
+          <Space>
+            <SendOutlined />
+            <span>Offer Management</span>
+            <Badge
+              count={offers?.length || 0}
+              style={{ backgroundColor: offers?.length ? "#1677ff" : "#d9d9d9" }}
+            />
+          </Space>
+        }
+        bordered={false}
+        className="offers-card"
+      >
+        <motion.div variants={itemVariants}>
+          {candidate.status === "Hired" ? (
+            <Card
+              type="inner"
+              title="Send New Offer"
+              style={{ marginBottom: 24 }}
+              bordered={false}
+              className="send-offer-form"
+            >
+              <Form form={offerForm} layout="vertical" onFinish={addOffer}>
+                <Form.Item
+                  name="template"
+                  label="Offer Template"
+                  rules={[{ required: true, message: "Please select an offer template" }]}
+                >
+                  <Select placeholder="Select offer template">
+                    <Select.Option value="Standard">Standard Offer</Select.Option>
+                    <Select.Option value="Contractor">Contractor Offer</Select.Option>
+                  </Select>
+                </Form.Item>
 
-                  <Form.Item>
-                    <Button type="primary" htmlType="submit" icon={<SendOutlined />}>
-                      Send Offer
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </Card>
-            </motion.div>
+                <Form.Item
+                  name="placeholders"
+                  label="Custom Fields"
+                  tooltip="Use JSON: {salary:60000, startDate:'2025-06-01'}"
+                >
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="e.g. {salary:60000, startDate:'2025-06-01'}"
+                    showCount
+                    maxLength={500}
+                  />
+                </Form.Item>
 
-            <motion.div variants={itemVariants}>
-              <Table
-                dataSource={offers}
-                rowKey="_id"
-                columns={[
-                  {
-                    title: "Date",
-                    dataIndex: "date",
-                    key: "date",
-                    render: (date) => {
-                      const formattedDate = new Date(date).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
-                      return formattedDate
-                    },
-                  },
-                  {
-                    title: "Template",
-                    dataIndex: "template",
-                    key: "template",
-                    render: (template) => <Tag color="blue">{template}</Tag>,
-                  },
-                  {
-                    title: "Sent To",
-                    dataIndex: "sentTo",
-                    key: "sentTo",
-                    render: (email) => <Text copyable>{email}</Text>,
-                  },
-                ]}
-                pagination={{
-                  pageSize: 5,
-                  hideOnSinglePage: true,
-                  showSizeChanger: false,
-                }}
-                style={{ marginTop: 16 }}
-                locale={{ emptyText: "No offers sent yet" }}
-              />
-            </motion.div>
-          </Card>
+                <Form.Item>
+                  <Button type="primary" htmlType="submit" icon={<SendOutlined />}>
+                    Send Offer
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Card>
+          ) : (
+            <Alert
+              type="warning"
+              showIcon
+              message="You can only send an offer letter once the candidate is Hired."
+              style={{ marginBottom: 24 }}
+            />
+          )}
         </motion.div>
-      ),
-    },
+
+        {/* existing table of past offers */}
+        <motion.div variants={itemVariants}>
+          <Table
+            dataSource={offers}
+            rowKey="_id"
+            columns={[
+              {
+                title: "Date",
+                dataIndex: "date",
+                key: "date",
+                render: (date) =>
+                  new Date(date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  }),
+              },
+              {
+                title: "Template",
+                dataIndex: "template",
+                key: "template",
+                render: (t) => <Tag color="blue">{t}</Tag>,
+              },
+              {
+                title: "Sent To",
+                dataIndex: "sentTo",
+                key: "sentTo",
+                render: (email) => <Text copyable>{email}</Text>,
+              },
+            ]}
+            pagination={{ pageSize: 5, hideOnSinglePage: true, showSizeChanger: false }}
+            style={{ marginTop: 16 }}
+            locale={{ emptyText: "No offers sent yet" }}
+          />
+        </motion.div>
+      </Card>
+    </motion.div>
+  ),
+},
+
     {
       key: "background",
       label: (
@@ -911,7 +925,13 @@ const CandidateDetail: React.FC = () => {
   ]
 
   return (
-    <div className="candidate-detail-container" style={{ padding: "24px" }}>
+    <div className="candidate-detail-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
+      <div style={{ marginBottom: 16 }}>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/candidates")}>
+          Back to Candidates
+        </Button>
+      </div>
+
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Tabs
           defaultActiveKey="info"
@@ -923,6 +943,29 @@ const CandidateDetail: React.FC = () => {
           className="candidate-tabs"
         />
       </motion.div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Delete Candidate"
+        open={deleteModalVisible}
+        onCancel={() => setDeleteModalVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setDeleteModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="delete" type="primary" danger onClick={confirmDelete}>
+            Delete
+          </Button>,
+        ]}
+      >
+        <div>
+          <p>Are you sure you want to delete this candidate?</p>
+          <p>
+            <strong>{candidate.name}</strong>
+          </p>
+          <p>This action cannot be undone.</p>
+        </div>
+      </Modal>
     </div>
   )
 }

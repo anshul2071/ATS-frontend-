@@ -111,13 +111,16 @@ const Register: React.FC = () => {
         token: string
         email: string
         name: string
+        userId: string
       }>("/auth/google", { credential })
   
       dispatch(
         setCredentials({
           token: apiRes.data.token,
           email: apiRes.data.email,
+          userId: apiRes.data.userId,
           name: apiRes.data.name,
+
         })
       )
       navigate("/dashboard")

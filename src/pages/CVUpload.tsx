@@ -9,14 +9,75 @@ import {
   message,
   Row,
   Col,
-  Card
+  Card,
+  Typography,
+  Divider,
+  Space
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import {
+  UploadOutlined,
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  TeamOutlined,
+  CodeOutlined,
+  TrophyOutlined,
+  DollarOutlined,
+  HistoryOutlined,
+  FilePdfOutlined,
+  SaveOutlined
+} from "@ant-design/icons";
 import axiosInstance from "../services/axiosInstance";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+
+// Custom styles
+const cardStyle = {
+  borderRadius: "12px",
+  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+  margin: "auto",
+  maxWidth: 800,
+  border: "none",
+  overflow: "hidden"
+};
+
+const cardHeadStyle = {
+  background: "linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%)",
+  borderBottom: "none",
+  padding: "20px 24px",
+};
+
+const cardBodyStyle = {
+  padding: "32px",
+};
+
+const inputStyle = {
+  borderRadius: "8px",
+  padding: "10px 12px",
+  height: "auto",
+  boxShadow: "none",
+  border: "1px solid #e2e8f0"
+};
+
+const selectStyle = {
+  borderRadius: "8px",
+  height: "auto",
+};
+
+const buttonStyle = {
+  height: "46px",
+  borderRadius: "8px",
+  fontWeight: 600,
+  boxShadow: "0 4px 12px rgba(67, 97, 238, 0.2)",
+  background: "linear-gradient(90deg, #4361ee 0%, #3a0ca3 100%)",
+  border: "none",
+};
 
 const CVUpload: React.FC = () => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = React.useState(false);
+  const [fileList, setFileList] = React.useState<any[]>([]);
 
   // This function normalizes the upload file input so that we always return an array.
   const normFile = (e: any) => {
@@ -60,6 +121,7 @@ const CVUpload: React.FC = () => {
       });
       message.success("CV uploaded successfully");
       form.resetFields();
+      setFileList([]);
     } catch (error: any) {
       console.error("CV upload error:", error);
       message.error(error.response?.data?.message || "CV upload failed");
@@ -68,94 +130,209 @@ const CVUpload: React.FC = () => {
     }
   };
 
+  const handleFileChange = (info: any) => {
+    let fileList = [...info.fileList];
+    // Limit to the most recent upload
+    fileList = fileList.slice(-1);
+    setFileList(fileList);
+  };
+
   return (
-    <Card title="Upload CV" style={{ maxWidth: 700, margin: "auto" }}>
+    <Card 
+      title={
+        <Title level={4} style={{ color: "white", margin: 0 }}>
+          <Space>
+            <UserOutlined /> Add New Candidate
+          </Space>
+        </Title>
+      } 
+      style={cardStyle}
+      headStyle={cardHeadStyle}
+      bodyStyle={cardBodyStyle}
+    >
+      <Text type="secondary" style={{ display: "block", marginBottom: "24px" }}>
+        Fill in the candidate details and upload their CV to add them to the recruitment pipeline.
+      </Text>
+      
       <Form
         form={form}
         onFinish={onFinish}
         layout="vertical"
-        // Enable autoComplete off for security (optional)
         autoComplete="off"
+        requiredMark="optional"
+        size="large"
       >
-        <Row gutter={16}>
-          <Col span={12}>
+        <Row gutter={[24, 0]}>
+          <Col xs={24} md={12}>
+            <Title level={5} style={{ marginTop: 0, marginBottom: "16px" }}>Personal Information</Title>
+            
             <Form.Item
               name="name"
-              label="Name"
+              label={<Text strong>Full Name</Text>}
               rules={[{ required: true, message: "Name is required" }]}
             >
-              <Input placeholder="Full Name" />
+              <Input 
+                placeholder="Enter candidate's full name" 
+                prefix={<UserOutlined style={{ color: "#a0aec0" }} />}
+                style={inputStyle}
+              />
             </Form.Item>
+            
             <Form.Item
               name="email"
-              label="Email"
+              label={<Text strong>Email Address</Text>}
               rules={[
                 { required: true, type: "email", message: "Valid email is required" }
               ]}
             >
-              <Input placeholder="Email Address" />
+              <Input 
+                placeholder="Enter email address" 
+                prefix={<MailOutlined style={{ color: "#a0aec0" }} />}
+                style={inputStyle}
+              />
             </Form.Item>
-            <Form.Item name="phone" label="Phone">
-              <Input placeholder="Phone Number" />
+            
+            <Form.Item 
+              name="phone" 
+              label={<Text strong>Phone Number</Text>}
+            >
+              <Input 
+                placeholder="Enter phone number" 
+                prefix={<PhoneOutlined style={{ color: "#a0aec0" }} />}
+                style={inputStyle}
+              />
             </Form.Item>
-            <Form.Item name="references" label="References">
-              <Input.TextArea rows={2} placeholder="Reference Emails" />
+            
+            <Form.Item 
+              name="references" 
+              label={<Text strong>References</Text>}
+            >
+              <Input.TextArea 
+                rows={3} 
+                placeholder="Enter reference emails or contact information" 
+                style={{ ...inputStyle, resize: "none" }}
+              />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          
+          <Col xs={24} md={12}>
+            <Title level={5} style={{ marginTop: 0, marginBottom: "16px" }}>Professional Details</Title>
+            
             <Form.Item
               name="technology"
-              label="Technology"
-              rules={[{ required: true, message: "Select a Technology" }]}
+              label={<Text strong>Technology</Text>}
+              rules={[{ required: true, message: "Select a technology" }]}
             >
-              <Select placeholder="Select..." allowClear>
-                <Select.Option value="DotNet">Dot Net</Select.Option>
-                <Select.Option value="React Js">React Js</Select.Option>
-                <Select.Option value="DevOps">DevOps</Select.Option>
-                <Select.Option value="QA">QA</Select.Option>
-                <Select.Option value="Java">Java</Select.Option>
-                <Select.Option value="Python">Python</Select.Option>
-                <Select.Option value="UI/UX Designer">UI/UX Designer</Select.Option>
+              <Select 
+                placeholder="Select technology" 
+                allowClear
+                suffixIcon={<CodeOutlined style={{ color: "#a0aec0" }} />}
+                style={selectStyle}
+                dropdownStyle={{ borderRadius: "8px" }}
+              >
+                <Option value="DotNet">Dot Net</Option>
+                <Option value="React Js">React Js</Option>
+                <Option value="DevOps">DevOps</Option>
+                <Option value="QA">QA</Option>
+                <Option value="Java">Java</Option>
+                <Option value="Python">Python</Option>
+                <Option value="UI/UX Designer">UI/UX Designer</Option>
               </Select>
             </Form.Item>
+            
             <Form.Item
               name="level"
-              label="Level"
-              rules={[{ required: true, message: "Select a Level" }]}
+              label={<Text strong>Experience Level</Text>}
+              rules={[{ required: true, message: "Select a level" }]}
             >
-              <Select placeholder="Select..." allowClear>
-                <Select.Option value="Intern">Intern</Select.Option>
-                <Select.Option value="Junior">Junior</Select.Option>
-                <Select.Option value="Associate">Associate</Select.Option>
-                <Select.Option value="Mid">Mid</Select.Option>
-                <Select.Option value="Senior">Senior</Select.Option>
+              <Select 
+                placeholder="Select experience level" 
+                allowClear
+                suffixIcon={<TrophyOutlined style={{ color: "#a0aec0" }} />}
+                style={selectStyle}
+                dropdownStyle={{ borderRadius: "8px" }}
+              >
+                <Option value="Intern">Intern</Option>
+                <Option value="Junior">Junior</Option>
+                <Option value="Associate">Associate</Option>
+                <Option value="Mid">Mid</Option>
+                <Option value="Senior">Senior</Option>
               </Select>
             </Form.Item>
-            <Form.Item name="salary" label="Salary Expectation">
-              <InputNumber style={{ width: "100%" }} placeholder="e.g. 10000" />
+            
+            <Form.Item 
+              name="salary" 
+              label={<Text strong>Salary Expectation</Text>}
+            >
+              <InputNumber 
+                style={{ width: "100%", ...inputStyle }} 
+                placeholder="e.g. 10000" 
+                prefix={<DollarOutlined style={{ color: "#a0aec0" }} />}
+                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+              />
             </Form.Item>
-            <Form.Item name="experience" label="Experience (yrs)">
-              <InputNumber style={{ width: "100%" }} min={0} />
+            
+            <Form.Item 
+              name="experience" 
+              label={<Text strong>Experience (years)</Text>}
+            >
+              <InputNumber 
+                style={{ width: "100%", ...inputStyle }} 
+                min={0} 
+                placeholder="Years of experience"
+                prefix={<HistoryOutlined style={{ color: "#a0aec0" }} />}
+              />
             </Form.Item>
           </Col>
         </Row>
+        
+        <Divider style={{ margin: "24px 0" }} />
+        
         <Form.Item
           name="file"
-          label="CV File (PDF/DOC/Images ≤10 MB)"
+          label={<Text strong>CV File (PDF/DOC/Images ≤10 MB)</Text>}
           valuePropName="fileList"
           getValueFromEvent={normFile}
           rules={[{ required: true, message: "Please select a file!" }]}
+          style={{ marginBottom: "32px" }}
         >
-          <Upload maxCount={1} beforeUpload={() => false}>
-            <Button icon={<UploadOutlined />}>Select File</Button>
+          <Upload 
+            maxCount={1} 
+            beforeUpload={() => false}
+            fileList={fileList}
+            onChange={handleFileChange}
+            listType="picture"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+          >
+            <Button 
+              icon={<UploadOutlined />} 
+              style={{ 
+                borderRadius: "8px", 
+                height: "46px",
+                borderColor: "#e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                width: "100%",
+                justifyContent: "center"
+              }}
+            >
+              <Space>
+                <FilePdfOutlined />
+                Click to Upload CV
+              </Space>
+            </Button>
           </Upload>
         </Form.Item>
+        
         <Form.Item>
           <Button
             type="primary"
             htmlType="submit"
             block
             loading={submitting}
+            icon={<SaveOutlined />}
+            style={buttonStyle}
           >
             Save Candidate
           </Button>

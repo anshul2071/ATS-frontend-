@@ -240,7 +240,7 @@ const Dashboard: React.FC = () => {
                       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                       height: "100%",
                     }}
-                    bodyStyle={{ padding: "24px" }}
+                    style={{ padding: "24px" }}
                   >
                     <div
                       style={{
