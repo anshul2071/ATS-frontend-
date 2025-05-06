@@ -42,7 +42,7 @@ import { useAppDispatch, useAppSelector } from "../store/hooks"
 import { logout as logoutAction } from "../store/userSlice"
 import axiosInstance from "../services/axiosInstance"
 import { Label } from "recharts"
-
+import {motion} from "framer-motion"
 const { Header, Sider, Content, Footer } = Layout
 const { Title, Text } = Typography
 const { Search } = Input
@@ -132,8 +132,10 @@ const LayoutComponent: React.FC = () => {
     "/candidates": "Candidates",
     "/schedule": "Schedule Interview",
     "/interviews": "Interview List",
+    "/calendar": "Interview Calendar",
     "/custom-sections": "Custom Sections",
     "/profile": "Profile",
+
   }
   const pathSnippets = location.pathname.split("/").filter(i => i)
   const extraBreadcrumbItems = pathSnippets.map((_, idx) => {
@@ -218,17 +220,109 @@ const LayoutComponent: React.FC = () => {
         trigger={null}
       >
         <div style={{
-          height: 70, margin: "16px",
-          display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start",
-        }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 8,
-            background: "rgba(255,255,255,0.2)", display: "flex",
-            alignItems: "center", justifyContent: "center", marginRight: collapsed ? 0 : 12,
-            fontSize: 18, fontWeight: 700, color: "#fff",
-          }}>A</div>
-          {!collapsed && <Title level={4} style={{ margin: 0, color: "#fff" }}>ATS System</Title>}
-        </div>
+  display: "flex",
+  alignItems: "center",
+  justifyContent: collapsed ? "center" : "flex-start",
+  marginRight: collapsed ? 0 : 12,
+}}>
+  <div style={{
+    width: collapsed ? 40 : 44,
+    height: collapsed ? 40 : 44,
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  }}>
+    <motion.svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 50 50"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Glowing background circle */}
+      <motion.circle
+        cx="25"
+        cy="25"
+        r="20"
+        fill="url(#logoGradient)"
+        initial={{ opacity: 0.7 }}
+        animate={{ opacity: [0.7, 0.9, 0.7] }}
+        transition={{ duration: 3, repeat: Infinity }}
+      />
+      
+      {/* Outer ring */}
+      <motion.circle
+        cx="25"
+        cy="25"
+        r="22"
+        fill="none"
+        stroke="rgba(255, 255, 255, 0.4)"
+        strokeWidth="1.5"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+      />
+      
+      {/* N letter */}
+      <motion.path
+        d="M18 16L18 34L22 34L22 22L32 34L32 16L28 16L28 28L18 16Z"
+        fill="white"
+        initial={{ opacity: 0, pathLength: 0 }}
+        animate={{ opacity: 1, pathLength: 1 }}
+        transition={{ duration: 1, delay: 0.5 }}
+      />
+      
+      {/* Gradient definitions */}
+      <defs>
+        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4361ee" />
+          <stop offset="100%" stopColor="#3a0ca3" />
+        </linearGradient>
+      </defs>
+    </motion.svg>
+    
+    {/* Subtle particle effects */}
+    {[...Array(5)].map((_, i) => (
+      <motion.div
+        key={i}
+        style={{
+          position: "absolute",
+          width: 3,
+          height: 3,
+          borderRadius: "50%",
+          background: "white",
+          top: "50%",
+          left: "50%",
+        }}
+        animate={{
+          x: [0, (Math.random() - 0.5) * 30],
+          y: [0, (Math.random() - 0.5) * 30],
+          opacity: [0, 0.8, 0],
+          scale: [0, 1, 0],
+        }}
+        transition={{
+          duration: 2 + Math.random() * 2,
+          repeat: Infinity,
+          delay: Math.random() * 2,
+        }}
+      />
+    ))}
+  </div>
+  
+  {!collapsed && (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
+      <Title level={4} style={{ margin: 0, color: "#fff", marginLeft: 12 }}>
+        Nexcruit
+      </Title>
+    </motion.div>
+  )}
+</div>
         <div style={{ padding: collapsed ? 0 : "0 16px" }}>
           {!collapsed && (
             <div style={{ marginBottom: 24, padding: "0 8px" }}>

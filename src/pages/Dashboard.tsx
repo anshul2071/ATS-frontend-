@@ -233,14 +233,15 @@ const Dashboard: React.FC = () => {
                 >
                   <Card
                     className="stat-card"
-                    bordered={false}
+                    variant="borderless"
                     style={{
                       borderRadius: borderRadius + 4,
                       overflow: "hidden",
                       boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
                       height: "100%",
+                      padding: "24px",
                     }}
-                    style={{ padding: "24px" }}
+                     
                   >
                     <div
                       style={{
@@ -334,7 +335,7 @@ const Dashboard: React.FC = () => {
         <motion.div variants={itemVariants}>
           <Card
             className="analytics-card"
-            bordered={false}
+            variant="borderless"
             title={
               <Space>
                 <span>Recruitment Analytics</span>
