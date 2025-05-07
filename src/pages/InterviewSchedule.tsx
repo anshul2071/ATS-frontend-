@@ -98,7 +98,7 @@ export default function InterviewSchedule() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [meetLink, setMeetLink] = useState<string | null>(null)
+  const [meetLink,   setMeetLink]   = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)

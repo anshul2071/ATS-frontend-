@@ -251,6 +251,25 @@ export default function InterviewList() {
         )
       },
     },
+
+
+    {
+      title: (
+        <Space>
+          <CalendarOutlined />
+          <span>Meeting</span>
+        </Space>
+      ),
+      dataIndex: 'meetLink',
+      key: 'meetLink',
+      render: (link: string) => (
+        <a href={link} target="_blank" rel="noopener noreferrer">
+          Join Google Meet
+        </a>
+      ),
+    },
+
+
   ]
 
   const clearFilters = () => {

@@ -7,6 +7,10 @@
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@fullcalendar/list": ["node_modules/@fullcalendar/list"]
+    },
 
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true

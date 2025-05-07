@@ -1,85 +1,121 @@
 // src/pages/InterviewCalendar.tsx
-import React, { useEffect, useState } from 'react';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import { EventClickArg, EventInput } from '@fullcalendar/core';
-import { Modal, Typography, Descriptions, Spin, Alert } from 'antd';
-import axiosInstance from '../services/axiosInstance';
+import React, { useEffect, useState } from 'react'
+import {
+  Calendar as BigCalendar,
+  momentLocalizer,
+  Event as RBCEvent,
+} from 'react-big-calendar'
+import moment from 'moment'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
+import {
+  Modal,
+  Typography,
+  Descriptions,
+  Spin,
+  Alert,
+  Tooltip,
+} from 'antd'
+import { CalendarOutlined } from '@ant-design/icons'
+import axiosInstance from '../services/axiosInstance'
 
-const { Title } = Typography;
+const { Title } = Typography
 
+// Backend interview shape: candidate may be null
 interface IInterview {
-  _id: string;
-  candidate: { name: string; email: string };
-  interviewerEmail: string;
-  pipelineStage: string;
-  date: string;      // ISO string
-  meetLink: string;
+  _id: string
+  candidate: { name: string; email: string } | null
+  interviewerEmail: string
+  pipelineStage: string
+  date: string
+  meetLink: string
 }
 
-interface CalendarEvent extends EventInput {
-  id: string;
-  title: string;
-  start: string;
-  extendedProps: { interview: IInterview };
+// Extend react-big-calendar event to carry the full interview
+interface InterviewEvent extends RBCEvent {
+  resource: IInterview
 }
 
-const InterviewCalendar: React.FC = () => {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+export default function InterviewCalendar() {
+  const [events, setEvents] = useState<InterviewEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<IInterview | null>(null)
+  const [detailVisible, setDetailVisible] = useState(false)
 
-  const [detailVisible, setDetailVisible] = useState(false);
-  const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const localizer = momentLocalizer(moment)
 
   useEffect(() => {
-    async function fetchInterviews() {
+    ;(async () => {
       try {
-        const res = await axiosInstance.get<IInterview[]>('/interviews');
-        const evts = res.data.map<CalendarEvent>((i) => ({
-          id: i._id,
-          title: `${i.candidate.name} — ${i.pipelineStage}`,
-          start: i.date,
-          extendedProps: { interview: i },
-        }));
-        setEvents(evts);
+        const res = await axiosInstance.get<IInterview[]>('/interviews')
+        const evts = res.data
+          // 1) drop any interview missing a candidate
+          .filter(i => {
+            if (!i.candidate) {
+              console.warn('Dropping interview with null candidate:', i._id)
+              return false
+            }
+            return true
+          })
+          // 2) map to the calendar event shape
+          .map<InterviewEvent>(i => ({
+            title: '',       // we’ll build the label in the renderer
+            start: new Date(i.date),
+            end:   moment(i.date).add(30, 'minutes').toDate(),
+            resource: i,
+          }))
+        setEvents(evts)
       } catch (e: any) {
-        setError(e.message || 'Failed to load interviews');
+        console.error('Failed to load interviews:', e)
+        setError(e.message || 'Failed to load interviews')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    }
-    fetchInterviews();
-  }, []);
+    })()
+  }, [])
 
-  const onEventClick = (arg: EventClickArg) => {
-    // FullCalendar v6+ puts our extendedProps on arg.event.extendedProps
-    const evt = arg.event;
-    setSelected({
-      id: evt.id,
-      title: evt.title,
-      start: evt.startStr,
-      extendedProps: evt.extendedProps as { interview: IInterview },
-    });
-    setDetailVisible(true);
-  };
+  const handleSelectEvent = (evt: InterviewEvent) => {
+    setSelected(evt.resource)
+    setDetailVisible(true)
+  }
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={2}>Interview Calendar</Title>
+      <Title level={2}>
+        <CalendarOutlined /> Interview Calendar
+      </Title>
 
       {loading ? (
         <Spin tip="Loading interviews…" />
       ) : error ? (
         <Alert type="error" message={error} />
       ) : (
-        <FullCalendar
-          plugins={[dayGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
+        <BigCalendar
+          localizer={localizer}
           events={events}
-          eventClick={onEventClick}
-          height="auto"
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: '75vh' }}
+          views={['month','week','day','agenda']}
+          defaultView="month"
+          popup
+          onSelectEvent={handleSelectEvent}
+          components={{
+            // Custom event renderer with null-check
+            event: ({ event }: { event: InterviewEvent }) => {
+              const iv = event.resource
+              const time = moment(event.start).format('HH:mm')
+              const label = iv.candidate
+                ? `${time} ${iv.candidate.name} — ${iv.pipelineStage}`
+                : `${time} (Unknown candidate)`
+
+              return (
+                <Tooltip title={iv.meetLink}>
+                  <span>{label}</span>
+                </Tooltip>
+              )
+            },
+          }}
         />
       )}
 
@@ -89,35 +125,34 @@ const InterviewCalendar: React.FC = () => {
         onCancel={() => setDetailVisible(false)}
         title="Interview Details"
       >
-        {selected && (
+        {selected ? (
           <Descriptions bordered column={1}>
             <Descriptions.Item label="Candidate">
-              {selected.extendedProps.interview.candidate.name} (
-              {selected.extendedProps.interview.candidate.email})
+              {selected.candidate
+                ? `${selected.candidate.name} (${selected.candidate.email})`
+                : 'Unknown candidate'}
             </Descriptions.Item>
             <Descriptions.Item label="Interviewer">
-              {selected.extendedProps.interview.interviewerEmail}
+              {selected.interviewerEmail}
             </Descriptions.Item>
             <Descriptions.Item label="Stage">
-              {selected.extendedProps.interview.pipelineStage}
+              {selected.pipelineStage}
             </Descriptions.Item>
             <Descriptions.Item label="Date & Time">
-              {new Date(selected.start).toLocaleString()}
+              {moment(selected.date).format('YYYY-MM-DD HH:mm')}
             </Descriptions.Item>
             <Descriptions.Item label="Google Meet Link">
               <a
-                href={selected.extendedProps.interview.meetLink}
+                href={selected.meetLink}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
-                {selected.extendedProps.interview.meetLink}
+                {selected.meetLink}
               </a>
             </Descriptions.Item>
           </Descriptions>
-        )}
+        ) : null}
       </Modal>
     </div>
-  );
-};
-
-export default InterviewCalendar;
+  )
+}
