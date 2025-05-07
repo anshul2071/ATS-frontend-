@@ -165,15 +165,17 @@ const Login: React.FC = () => {
             style={{ width: "100%", maxWidth: 480 }}
           >
             <Card
-              style={{
-                width: "100%",
-                borderRadius: 16,
-                overflow: "hidden",
-                boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-                border: "none",
-              }}
-              bodyStyle={{ padding: 0 }}
-            >
+                style={{
+                  width: "100%",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+                  border: "none",  
+                }}
+                styles={{
+                   body: { padding: 0 },
+                   }}
+              >
               <div style={{
                 background: "linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)",
                 padding: 32,
@@ -398,9 +400,10 @@ const Login: React.FC = () => {
             destroyOnClose
             title={null}
             width={400}
-            style={{ top: 20 }}
-            bodyStyle={{ padding: 0 }}
-            maskStyle={{ backdropFilter: "blur(5px)", background: "rgba(0,0,0,0.5)" }}
+            styles={{
+              body: { padding: 0 },
+              }}
+              
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}

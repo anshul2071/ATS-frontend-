@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Form, Input, Button, message, Typography } from 'antd'
 import axiosInstance from '../services/axiosInstance'
+import { useDispatch } from 'react-redux'
+import { setCredentials } from '../store/userSlice'
 
 const { Text } = Typography
 
@@ -18,7 +20,8 @@ export default function EmailEditor({ visible, onClose, onUpdated }: Props) {
 
   const [emailForm] = Form.useForm<{ email: string }>()
   const [otpForm]   = Form.useForm<{ otp: string }>()
-
+ 
+  const dispatch = useDispatch()
   useEffect(() => {
     if (!visible) {
       emailForm.resetFields()
@@ -36,7 +39,7 @@ export default function EmailEditor({ visible, onClose, onUpdated }: Props) {
       const email = values.email.trim().toLowerCase()
       const res = await axiosInstance.post<{ token: string }>(
         '/auth/request-email-change',
-        { email }
+        { newEmail: email }
       )
       setRequestToken(res.data.token)
       setNewEmail(email)
@@ -56,15 +59,26 @@ export default function EmailEditor({ visible, onClose, onUpdated }: Props) {
     }
     setLoading(true)
     try {
-      await axiosInstance.post(
+      const res = await axiosInstance.post<{
+        token: string 
+        userId: string
+        email: string
+        name: string
+      }>(
         '/auth/verify-email-change',
-        {
-          token: requestToken,
-          otp: values.otp.trim(),
-        }
+        { token: requestToken, otp: values.otp.trim() }
       )
-      message.success('Email updated successfully.')
-      onUpdated(newEmail)
+      dispatch (setCredentials({
+        token: res.data.token,
+        userId: res.data.userId,
+        name: res.data.name,
+        email: res.data.email,
+      }))
+
+      message.success('Email Update Sucessfully. ')
+      onUpdated(res.data.email)
+
+
       onClose()
     } catch (err: any) {
       message.error(err.response?.data?.message || 'Invalid OTP.')

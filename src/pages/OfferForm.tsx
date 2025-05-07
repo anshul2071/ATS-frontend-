@@ -1,105 +1,92 @@
 // src/pages/OfferForm.tsx
-import React, { FC } from 'react';
-import { Form, Input, Button, Space } from 'antd';
-import {
-  PlusOutlined,
-  MinusCircleOutlined,
-} from '@ant-design/icons';
-import type {
-  FormInstance,
-  FormListFieldData,
-} from 'antd/es/form';
-import axiosInstance from '../services/axiosInstance';
+import React, { useEffect, useState } from 'react'
+import { Form, Select, InputNumber, DatePicker, Button , message} from 'antd'
+import axiosInstance from '../services/axiosInstance'
+import type { OfferTemplate } from '../services/types'
 
-interface Props {
-  candidateId: string;
-  onSuccess?: () => void;
+interface Props { candidateId: string
+
+  onSuccess?: () => void
+ }
+interface FormValues {
+  templateId: string
+  salary: number
+  startDate: moment.Moment
 }
 
-const OfferForm: FC<Props> = ({ candidateId, onSuccess }) => {
-  const [form] = Form.useForm();
+const OfferForm: React.FC<Props> = ({ candidateId , onSuccess}) => {
+  const [templates, setTemplates] = useState<OfferTemplate[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [form] = Form.useForm<FormValues>()
 
-  const handleFinish = async (values: any) => {
+  useEffect(() => {
+    axiosInstance.get<OfferTemplate[]>('/offer-templates')
+      .then(r => setTemplates(r.data))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const onFinish = async (vals: FormValues) => {
     try {
-      // assuming your backend expects { candidateId, offers: [...] }
       await axiosInstance.post('/offers', {
         candidateId,
-        offers: values.offers,
-      });
-      form.resetFields();
-      onSuccess?.();
-    } catch {
-      // you can show antd message.error here
+        templateId: vals.templateId,
+        placeholders: {
+          salary:    vals.salary,
+          startDate: vals.startDate.format('YYYY-MM-DD'),
+        }
+      })
+      form.resetFields()
+      message.success('Offer sent successfully')
+      onSuccess?.()
+    } catch (err) {
+      message.error('Failed to send offer')
     }
-  };
+  }
+  
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      onFinish={handleFinish}
-      autoComplete="off"
-    >
-      <Form.List name="offers">
-        {(
-          fields: FormListFieldData[],
-          operations: {
-            add: () => void;
-            remove: (name: number) => void;
-          }
-        ) => (
-          <>
-            {fields.map((field) => (
-              <Space
-                key={field.key}
-                style={{ display: 'flex', marginBottom: 8 }}
-                align="baseline"
-              >
-                <Form.Item
-                  {...field}
-                  name={[field.name, 'template']}
-                  fieldKey={[field.fieldKey!, 'template']}
-                  rules={[{ required: true, message: 'Template required' }]}
-                >
-                  <Input placeholder="Offer Template" />
-                </Form.Item>
+    <Form form={form} layout="vertical" onFinish={onFinish}>
+      <Form.Item
+        name="templateId"
+        label="Offer Template"
+        rules={[{ required: true }]}
+      >
+        <Select loading={loading} placeholder="Select template">
+          {templates.map(t => (
+            <Select.Option key={t._id} value={t._id}>
+              {t.name}
+            </Select.Option>
+          ))}
+        </Select>
+      </Form.Item>
 
-                <Form.Item
-                  {...field}
-                  name={[field.name, 'sentTo']}
-                  fieldKey={[field.fieldKey!, 'sentTo']}
-                  rules={[{ required: true, message: 'Recipient required' }]}
-                >
-                  <Input placeholder="Send To (email)" />
-                </Form.Item>
+      <Form.Item
+        name="salary"
+        label="Salary"
+        rules={[{ required: true }]}
+      >
+        <InputNumber
+          style={{ width: '100%' }}
+          formatter={v => `$ ${v}`}
+          parser={v => v!.replace(/\$\s?|(,*)/g, '')}
+        />
+      </Form.Item>
 
-                <MinusCircleOutlined
-                  onClick={() => operations.remove(field.name as number)}
-                />
-              </Space>
-            ))}
-
-            <Form.Item>
-              <Button
-                type="dashed"
-                onClick={() => operations.add()}
-                block
-                icon={<PlusOutlined />}
-              >
-                Add Offer
-              </Button>
-            </Form.Item>
-          </>
-        )}
-      </Form.List>
+      <Form.Item
+        name="startDate"
+        label="Start Date"
+        rules={[{ required: true }]}
+      >
+        <DatePicker style={{ width: '100%' }} />
+      </Form.Item>
 
       <Form.Item>
-        <Button type="primary" htmlType="submit" block>
-          Submit Offers
+        <Button type="primary" htmlType="submit">
+          Send Offer
         </Button>
       </Form.Item>
     </Form>
-  );
-};
+  )
+}
 
-export default OfferForm;
+export default OfferForm
