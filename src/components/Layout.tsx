@@ -33,9 +33,12 @@ import {
   BellOutlined,
   SearchOutlined,
   AppstoreOutlined,
+
   FileTextOutlined,
+  FileExclamationOutlined ,
   QuestionCircleOutlined,
   ClockCircleOutlined,
+  FileSearchOutlined,
 } from "@ant-design/icons"
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom"
 import { useAppDispatch, useAppSelector } from "../store/hooks"
@@ -43,6 +46,9 @@ import { logout as logoutAction } from "../store/userSlice"
 import axiosInstance from "../services/axiosInstance"
 import { Label } from "recharts"
 import {motion} from "framer-motion"
+import { icons } from "antd/es/image/PreviewGroup"
+import { Offer } from '../services/offerService';
+
 const { Header, Sider, Content, Footer } = Layout
 const { Title, Text } = Typography
 const { Search } = Input
@@ -121,21 +127,49 @@ const LayoutComponent: React.FC = () => {
     { key: "/interviews", icon: <FileTextOutlined />, label: <Link to="/interviews">Interviews</Link> },
     { key: "/interview-calendar", icon: <CalendarOutlined/>, label: <Link to="/calendar">Interview Calendar</Link>}
   ]
-  const settingsItems = [
-    { key: "/custom-sections", icon: <AppstoreOutlined />, label: <Link to="/custom-sections">Sections</Link> },
-    { key: "/profile", icon: <UserOutlined />, label: <Link to="/profile">Profile</Link> },
+ 
+
+
+  const assessmentItems = [
+    {
+      key: '/assessments',
+      icon: <FileSearchOutlined/>,                  // icon for offer letters
+      label: <Link to="/assessments">Assessment</Link>, // more descriptive label
+    },
   ]
 
-  const breadcrumbNameMap: Record<string, string> = {
-    "/dashboard": "Dashboard",
-    "/upload": "Upload CV",
-    "/candidates": "Candidates",
-    "/schedule": "Schedule Interview",
-    "/interviews": "Interview List",
-    "/calendar": "Interview Calendar",
-    "/custom-sections": "Custom Sections",
-    "/profile": "Profile",
+  const letterItems = [
+    {
+      key: '/offers',
+      icon: <FileTextOutlined />,                     // icon for offer letters
+      label: <Link to="/offers">Offer Letters</Link>, // more descriptive label
+    },
 
+    
+     ]
+
+
+
+     const settingsItems = [
+      { key: "/custom-sections", icon: <AppstoreOutlined />, label: <Link to="/custom-sections">Sections</Link> },
+      { key: "/profile", icon: <UserOutlined />, label: <Link to="/profile">Profile</Link> },
+    ]
+
+
+  const breadcrumbNameMap: Record<string, string> = {
+    '/dashboard': 'Dashboard',
+  '/upload': 'Upload CV',
+  '/candidates': 'Candidates',
+  '/candidates/:id': 'Candidate Details',
+  '/schedule': 'Schedule Interview',
+  '/interviews': 'Interview List',
+  '/calendar': 'Interview Calendar',
+  '/assessments': 'Assessments',
+  '/custom-sections': 'Custom Sections',
+  '/profile': 'Profile',
+  '/assessment': 'Assessment',
+  '/offers': 'Offer Letters',        
+  
   }
   const pathSnippets = location.pathname.split("/").filter(i => i)
   const extraBreadcrumbItems = pathSnippets.map((_, idx) => {
@@ -364,6 +398,33 @@ const LayoutComponent: React.FC = () => {
               items={interviewItems}
             />
           </div>
+         
+
+          <div style={{ marginBottom: 8, padding: collapsed ? 0 : "0 8px" }}>  
+            {!collapsed && <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>ASSESSMENT</Text>}
+            <Menu
+              theme="dark"
+              mode="inline"
+              inlineCollapsed={collapsed}
+              selectedKeys={[location.pathname]}
+              style={{ background: "transparent", border: "none", fontSize: 15 }}
+              items={assessmentItems}
+            />
+          </div>
+          
+          <div style={{ marginBottom: 8, padding: collapsed ? 0 : "0 8px" }}>  
+            {!collapsed && <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>LETTER</Text>}
+            <Menu
+              theme="dark"
+              mode="inline"
+              inlineCollapsed={collapsed}
+              selectedKeys={[location.pathname]}
+              style={{ background: "transparent", border: "none", fontSize: 15 }}
+              items={letterItems}
+            />
+          </div>
+
+
           <div style={{ marginBottom: 8, padding: collapsed ? 0 : "0 8px" }}>  
             {!collapsed && <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600 }}>SETTINGS</Text>}
             <Menu

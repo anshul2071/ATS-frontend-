@@ -230,7 +230,7 @@ const Home: React.FC = () => {
             </Button>
           </Link>
 
-          <Link to="/signup">
+          <Link to="/register">
             <Button
               style={{
                 background: "rgba(255, 255, 255, 0.15)",

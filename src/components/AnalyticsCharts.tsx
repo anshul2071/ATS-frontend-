@@ -48,6 +48,8 @@ const cardStyle = {
   borderRadius: "12px",
   boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
   height: "100%",
+  background: "#ffffff",
+  border: "none",
 }
 
 const cardHeadStyle = {
@@ -58,7 +60,7 @@ const cardHeadStyle = {
 
 const cardBodyStyle = {
   padding: "24px",
-  background: "white",
+  background: "#ffffff",
 }
 
 const titleStyle = {

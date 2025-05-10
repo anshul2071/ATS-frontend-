@@ -2,9 +2,11 @@ import axiosInstance from './axiosInstance'
 
 export interface Offer {
   _id: string
-  template: string
+  templateId: string
+  templateName: string
   sentTo: string
   date: string
+  offerPdfUrl: string
 }
 
 export const getOffers = async (candidateId: string): Promise<Offer[]> => {
@@ -14,8 +16,14 @@ export const getOffers = async (candidateId: string): Promise<Offer[]> => {
 
 export const sendOffer = async (
   candidateId: string,
-  payload: { template: string; placeholders?: string }
+  payload: {
+    templateId: string
+    placeholders?: Record<string, any>
+  }
 ): Promise<Offer[]> => {
-  const res = await axiosInstance.post<Offer[]>(`/candidates/${candidateId}/offers`, payload)
+  const res = await axiosInstance.post<Offer[]>(
+    `/candidates/${candidateId}/offers`,
+    payload
+  )
   return res.data
 }

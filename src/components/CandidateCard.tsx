@@ -1,202 +1,229 @@
-import React from 'react';
-import { Card, Tag, Typography, theme, Avatar, Tooltip } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { 
-  UserOutlined, 
-  RightOutlined, 
-  CodeOutlined, 
-  CheckCircleFilled 
-} from '@ant-design/icons';
+"use client"
 
-const { Text, Title, Paragraph } = Typography;
+import type React from "react"
+import {
+  Card,
+  Avatar,
+  Tag,
+  Typography,
+  Button,
+  Tooltip,
+  Divider,
+} from "antd"
+import {
+  MailOutlined,
+  PhoneOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  LaptopOutlined,
+} from "@ant-design/icons"
+import { motion } from "framer-motion"
+import styled from "styled-components"
+
+const { Text } = Typography
 
 export interface Candidate {
-  _id: string;
-  name: string;
-  technology?: string;
-  status?: string;
+  _id: string
+  name: string
+  technology?: string
+  status?: string
+  email?: string
+  phone?: string
+  level?: string
 }
 
 interface CandidateCardProps {
-  candidate: Candidate;
+  candidate: Candidate
+  onClick: (id: string) => void
+  onDelete: (id: string, e: React.MouseEvent) => void
 }
 
-const statusColors: Record<string, string> = {
-  Shortlisted: 'green',
-  'HR Screening': 'blue',
-  'Technical Interview': 'purple',
-  'Managerial Interview': 'cyan',
-  Hired: 'gold',
-  Rejected: 'red',
-  Blacklisted: 'default',
-};
+// Styled components for improved UI
+const StyledCard = styled(Card)`
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(to bottom right, #f9fcff, #e6f0ff);
+  border: 1px solid #dfeaff;
+  box-shadow: 0 10px 30px rgba(74, 144, 226, 0.15);
+  transition: all 0.3s ease-in-out;
 
-// Direct color mapping for status indicator
-const statusIndicatorColors: Record<string, string> = {
-  Shortlisted: '#52c41a',
-  'HR Screening': '#1890ff',
-  'Technical Interview': '#722ed1',
-  'Managerial Interview': '#13c2c2',
-  Hired: '#faad14',
-  Rejected: '#f5222d',
-  Blacklisted: '#d9d9d9',
-};
+  .ant-card-body {
+    padding: 0;
+  }
+`
 
-const CandidateCard: React.FC<CandidateCardProps> = ({ candidate }) => {
-  const navigate = useNavigate();
-  const {
-    token: { 
-      borderRadius, 
-      colorBgContainer, 
-      colorTextSecondary, 
-      colorPrimary, 
-      colorBorderSecondary,
-      boxShadow,
-      colorBgElevated,
-      colorText
-    },
-  } = theme.useToken();
+const CardContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  background-color: white;
+  border-radius: 20px;
+`
 
-  const handleCardClick = () => {
-    navigate(`/candidates/${candidate._id}`);
-  };
+const AvatarContainer = styled.div`
+  margin-bottom: 16px;
+`
 
-  // Get initials for avatar
+const NameText = styled(Text)`
+  font-size: 26px;
+  font-weight: 600;
+  color: #0a2540;
+  margin-bottom: 8px;
+  text-align: center;
+`
+
+const StatusTag = styled(Tag)<{ color?: string }>`
+  background-color: ${(props) => props.color || "#4a90e2"};
+  color: white;
+  font-size: 14px;
+  border-radius: 16px;
+  padding: 4px 18px;
+  margin-bottom: 20px;
+`
+
+const ContactInfo = styled.div`
+  width: 100%;
+  margin-bottom: 20px;
+`
+
+const ContactItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: #444;
+
+  .anticon {
+    color: #4a90e2;
+    font-size: 18px;
+  }
+`
+
+const TagsContainer = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+`
+
+const TechTag = styled(Tag)`
+  background-color: #e8f2ff;
+  color: #2a70c2;
+  border-radius: 14px;
+  font-size: 14px;
+  padding: 4px 12px;
+  border: none;
+`
+
+const CardFooter = styled.div`
+  display: flex;
+  justify-content: space-around;
+  padding: 16px;
+  background: #f5faff;
+  border-top: 1px solid #e3f0ff;
+`
+
+const FooterButton = styled(Button)`
+  border: none;
+  color: #4a90e2;
+  background: transparent;
+  font-size: 16px;
+
+  &:hover {
+    color: #2a70c2;
+    background: rgba(74, 144, 226, 0.05);
+  }
+`
+
+const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onClick, onDelete }) => {
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
-      .substring(0, 2);
-  };
+      .substring(0, 2)
+  }
 
-  // Get background gradient based on status
-  const getStatusGradient = (status?: string) => {
-    if (!status) return 'linear-gradient(to right, #e0e0e0, #f0f0f0)';
-    
-    const baseColor = statusIndicatorColors[status] || '#d9d9d9';
-    const lighterColor = status === 'Hired' ? '#fff8e6' : 
-                         status === 'Rejected' ? '#fff1f0' : 
-                         status === 'Shortlisted' ? '#f6ffed' : 
-                         status === 'HR Screening' ? '#e6f7ff' : 
-                         status === 'Technical Interview' ? '#f9f0ff' : 
-                         status === 'Managerial Interview' ? '#e6fffb' : '#f5f5f5';
-    
-    return `linear-gradient(135deg, ${lighterColor} 0%, ${colorBgContainer} 100%)`;
-  };
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete(candidate._id, e)
+  }
 
   return (
-    <Card
-  hoverable
-  onClick={handleCardClick}
-  style={{
-    width: 320, // Increased width
-    margin: 16,
-    borderRadius: 16,
-    background: colorBgContainer,
-    boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
-    border: `1px solid ${colorBorderSecondary}`,
-    position: 'relative',
-    overflow: 'hidden',
-    transition: 'transform 0.3s',
-  }}
-  bodyStyle={{ padding: 0 }}
->
-  {/* Top section with background */}
-  <div 
-    style={{ 
-      background: getStatusGradient(candidate.status),
-      padding: '24px 20px 20px',
-      position: 'relative',
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <Avatar 
-        size={56}
-        style={{ 
-          backgroundColor: colorPrimary,
-          fontSize: 20,
-          marginRight: 16,
-        }}
-      >
-        {getInitials(candidate.name)}
-      </Avatar>
-      <div style={{ flex: 1 }}>
-        <Title level={5} style={{ margin: 0, fontWeight: 600 }}>{candidate.name}</Title>
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          Candidate ID: {candidate._id.substring(0, 8)}...
-        </Text>
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.03 }}
+      transition={{ duration: 0.3 }}
+    >
+      <StyledCard hoverable onClick={() => onClick(candidate._id)}>
+        <CardContent>
+          <AvatarContainer>
+            <Avatar
+              size={96}
+              style={{
+                backgroundColor: "#4a90e2",
+                fontSize: 32,
+                fontWeight: "bold",
+              }}
+            >
+              {getInitials(candidate.name)}
+            </Avatar>
+          </AvatarContainer>
 
-    {/* Status pill BELOW name */}
-    {candidate.status && (
-      <div 
-        style={{
-          marginTop: 12,
-          display: 'inline-block',
-          borderRadius: 14,
-          padding: '4px 12px',
-          fontSize: 12,
-          fontWeight: 600,
-          background: statusIndicatorColors[candidate.status] || '#d9d9d9',
-          color: '#fff',
-          textTransform: 'uppercase',
-          letterSpacing: 0.5,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-        }}
-      >
-        {candidate.status}
-      </div>
-    )}
-  </div>
+          <NameText>{candidate.name}</NameText>
 
-  {/* Technology */}
-  <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colorBorderSecondary}` }}>
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <CodeOutlined style={{ color: colorPrimary, marginRight: 8 }} />
-      <Text strong style={{ fontSize: 13 }}>Technology</Text>
-    </div>
-    <Paragraph style={{ marginLeft: 28, marginTop: 6, fontSize: 14 }} ellipsis={{ rows: 1, tooltip: candidate.technology || 'N/A' }}>
-      {candidate.technology || 'N/A'}
-    </Paragraph>
-  </div>
+          <StatusTag color="#4a90e2">{candidate.status || "New"}</StatusTag>
 
-  {/* Bottom section */}
-  <div 
-    style={{ 
-      padding: '14px 20px', 
-      display: 'flex', 
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      background: colorBgElevated
-    }}
-  >
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <div 
-        style={{ 
-          width: 8, 
-          height: 8, 
-          borderRadius: '50%', 
-          background: statusIndicatorColors[candidate.status || ''] || '#d9d9d9',
-          marginRight: 8
-        }} 
-      />
-      <Text type="secondary" style={{ fontSize: 12 }}>
-        {candidate.status ? `${candidate.status} Status` : 'No Status'}
-      </Text>
-    </div>
+          <ContactInfo>
+            {candidate.email && (
+              <ContactItem>
+                <MailOutlined />
+                <span>{candidate.email}</span>
+              </ContactItem>
+            )}
+            {candidate.phone && (
+              <ContactItem>
+                <PhoneOutlined />
+                <span>{candidate.phone}</span>
+              </ContactItem>
+            )}
+          </ContactInfo>
 
-    <Tooltip title="View Details">
-      <div style={{ color: colorPrimary, fontWeight: 500, fontSize: 13 }}>
-        View Details <RightOutlined style={{ marginLeft: 4, fontSize: 12 }} />
-      </div>
-    </Tooltip>
-  </div>
-</Card>
+          <TagsContainer>
+            {candidate.technology && (
+              <Tooltip title="Technology">
+                <TechTag icon={<LaptopOutlined />}>{candidate.technology}</TechTag>
+              </Tooltip>
+            )}
+            {candidate.level && (
+              <Tooltip title="Level">
+                <TechTag>{candidate.level}</TechTag>
+              </Tooltip>
+            )}
+          </TagsContainer>
+        </CardContent>
 
-  );
-};
+        <Divider style={{ margin: 0 }} />
 
-export default CandidateCard;
+        <CardFooter>
+          <FooterButton
+            type="text"
+            icon={<EyeOutlined style={{ fontSize: 18 }} />}
+            onClick={() => onClick(candidate._id)}
+          />
+          <FooterButton
+            type="text"
+            icon={<DeleteOutlined style={{ fontSize: 18 }} />}
+            onClick={handleDelete}
+          />
+        </CardFooter>
+      </StyledCard>
+    </motion.div>
+  )
+}
+
+export default CandidateCard
