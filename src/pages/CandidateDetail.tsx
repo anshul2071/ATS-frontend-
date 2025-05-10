@@ -59,6 +59,7 @@ import {
   StarFilled,
   FileSearchOutlined,
   TrophyOutlined,
+
   DollarOutlined,
 } from "@ant-design/icons"
 import type { UploadProps } from "antd"
@@ -111,6 +112,7 @@ interface CandidateType {
   status: string
   assessments: Assessment[]
   parserSummary?: ResumeSummary
+  cvUrl?: string
 }
 
 // Animation variants
@@ -125,6 +127,12 @@ const containerVariants = {
     },
   },
 }
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  hover: { scale: 1.02 },
+};
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
@@ -672,7 +680,7 @@ const CandidateDetail: React.FC = () => {
                   </Panel>
                 </Collapse>
               </div>
-
+                
               {candidate.parserSummary && (
                 <div style={{ marginTop: 16 }}>
                   <Divider orientation="left">Resume Analysis</Divider>
@@ -683,7 +691,58 @@ const CandidateDetail: React.FC = () => {
           </motion.div>
         </motion.div>
       )}
+
+
+   {candidate.cvUrl && (
+          <motion.div
+            key="resume-card"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={cardVariants}
+            whileHover="hover"
+            style={{ marginTop: 24 }}
+          >
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: 12,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                backgroundColor: "#fff",
+              }}
+            >
+              <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
+                Candidate Resume
+              </Text>
+              <Divider style={{ margin: "8px 0 16px" }} />
+              <Space size="middle">
+                <Button
+                  type="default"
+                  icon={<DownloadOutlined />}
+                  href={candidate.cvUrl}
+                  download
+                >
+                  Download CV
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<FileSearchOutlined />}
+                  onClick={() => {
+                    setSelectedResume(candidate.cvUrl!);
+                    setResumePreviewVisible(true);
+                  }}
+                >
+                  View CV
+                </Button>
+              </Space>
+            </Card>
+          </motion.div>
+        )}
     </AnimatePresence>
+
+
+
+
   )
 
   return (
