@@ -45,6 +45,7 @@ import {
   TeamOutlined,
   CodeOutlined,
   ClockCircleOutlined,
+  EyeOutlined,
   DownloadOutlined,
   SendOutlined,
   SafetyCertificateOutlined,
@@ -59,13 +60,13 @@ import {
   StarFilled,
   FileSearchOutlined,
   TrophyOutlined,
-
   DollarOutlined,
 } from "@ant-design/icons"
 import type { UploadProps } from "antd"
 import { motion, AnimatePresence } from "framer-motion"
 import axiosInstance from "../services/axiosInstance"
 import ResumeParser, { type ResumeSummary } from "../components/ResumeParser"
+import dayjs from "dayjs"
 
 // Update the pipeline stages constant
 const PIPELINE_STAGES = [
@@ -91,6 +92,16 @@ interface Assessment {
   score?: number
   createdAt: string
 }
+
+interface AssessmentItem {
+  _id: string
+  title: string
+  score: number
+  remarks?: string
+  fileUrl: string
+  createdAt: string
+}
+
 
 interface Offer {
   _id: string
@@ -132,7 +143,7 @@ const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
   hover: { scale: 1.02 },
-};
+}
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
@@ -158,6 +169,9 @@ const statusColors: Record<string, string> = {
   Rejected: "#f5222d",
   Blacklisted: "#595959",
 }
+
+
+
 
 // Technology colors
 const techColors: Record<string, string> = {
@@ -221,7 +235,7 @@ const getFileIcon = (fileUrl: string) => {
   }
 }
 
-const CandidateDetail: React.FC = () => {
+const CandidateDetail:React.FC =() =>{
   const { id: candidateId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -240,8 +254,22 @@ const CandidateDetail: React.FC = () => {
   const [newStatus, setNewStatus] = useState<string>("")
   const [statusHistory, setStatusHistory] = useState<{ status: string; date: string }[]>([])
   const [isFavorite, setIsFavorite] = useState(false)
+  const [assessments, setAssessments] = useState<AssessmentItem[]>([])
+ 
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<AssessmentItem | null>(null)
+  
 
-  // Ref to store previous status for comparison
+  const openAssessmentDetails = (rec: AssessmentItem) => {
+    setDetailRecord(rec)
+    setDetailModalVisible(true)
+  }
+  
+  const closeAssessmentDetails = () => {
+    setDetailModalVisible(false)
+    setDetailRecord(null)
+  }
+
   const prevStatusRef = useRef<string>("")
 
   useEffect(() => {
@@ -362,24 +390,37 @@ const CandidateDetail: React.FC = () => {
       setTimeout(() => onSuccess && onSuccess("ok"), 0)
     },
   }
+// at the very top of the file
 
-  const addAssessment = async (vals: any) => {
-    try {
-      const fd = new FormData()
-      fd.append("title", vals.title)
-      fd.append("score", vals.score.toString())
-      fd.append("remarks", vals.remarks || "")
-      fd.append("file", vals.file.file.originFileObj)
-      const { data } = await axiosInstance.post<CandidateType>(`/candidates/${candidateId}/assessment`, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-      setCandidate(data)
-      assessForm.resetFields()
-      message.success("Assessment added successfully")
-    } catch {
+const addAssessment = async (vals: any) => {
+  try {
+    const formData = new FormData()
+    formData.append("title", vals.title)
+    formData.append("score", String(vals.score))
+    formData.append("remarks", vals.remarks || "")
+    // multer is listening for field name “file”
+    formData.append("file", vals.file[0].originFileObj)
+
+    const { data: newAssessment } = await axiosInstance.post<AssessmentItem>(
+      `/candidates/${candidateId}/assessment`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    )
+
+    setAssessments(prev => [newAssessment, ...prev])
+    assessForm.resetFields()
+    message.success("Assessment added successfully")
+  } catch (err: any) {
+    // catch multer/busboy “Unexpected end of form”
+    if (err.message?.includes("Unexpected end of form")) {
+      message.error("File upload was interrupted — please try again.")
+    } else {
       message.error("Upload failed")
     }
   }
+}
+
+
 
   const handleDeleteCandidate = () => {
     setDeleteModalVisible(true)
@@ -680,7 +721,7 @@ const CandidateDetail: React.FC = () => {
                   </Panel>
                 </Collapse>
               </div>
-                
+
               {candidate.parserSummary && (
                 <div style={{ marginTop: 16 }}>
                   <Divider orientation="left">Resume Analysis</Divider>
@@ -692,60 +733,51 @@ const CandidateDetail: React.FC = () => {
         </motion.div>
       )}
 
-
-   {candidate.cvUrl && (
-          <motion.div
-            key="resume-card"
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            variants={cardVariants}
-            whileHover="hover"
-            style={{ marginTop: 24 }}
+      {candidate.cvUrl && (
+        <motion.div
+          key="resume-card"
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={cardVariants}
+          whileHover="hover"
+          style={{ marginTop: 24 }}
+        >
+          <Card
+            bordered={false}
+            style={{
+              borderRadius: 12,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+              backgroundColor: "#fff",
+            }}
           >
-            <Card
-              bordered={false}
-              style={{
-                borderRadius: 12,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                backgroundColor: "#fff",
-              }}
-            >
-              <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
-                Candidate Resume
-              </Text>
-              <Divider style={{ margin: "8px 0 16px" }} />
-              <Space size="middle">
-                <Button
-                  type="default"
-                  icon={<DownloadOutlined />}
-                  href={candidate.cvUrl}
-                  download
-                >
-                  Download CV
-                </Button>
-                <Button
-                  type="primary"
-                  icon={<FileSearchOutlined />}
-                  onClick={() => {
-                    setSelectedResume(candidate.cvUrl!);
-                    setResumePreviewVisible(true);
-                  }}
-                >
-                  View CV
-                </Button>
-              </Space>
-            </Card>
-          </motion.div>
-        )}
+            <Text strong style={{ display: "block", marginBottom: 12, fontSize: 16 }}>
+              Candidate Resume
+            </Text>
+            <Divider style={{ margin: "8px 0 16px" }} />
+            <Space size="middle">
+              <Button type="default" icon={<DownloadOutlined />} href={candidate.cvUrl} download>
+                Download CV
+              </Button>
+              <Button
+                type="primary"
+                icon={<FileSearchOutlined />}
+                onClick={() => {
+                  setSelectedResume(candidate.cvUrl!)
+                  setResumePreviewVisible(true)
+                }}
+              >
+                View CV
+              </Button>
+            </Space>
+          </Card>
+        </motion.div>
+      )}
     </AnimatePresence>
-
-
-
-
   )
 
   return (
+    <>
     <div className="candidate-detail-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
       <div style={{ marginBottom: 16 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/candidates")} style={{ borderRadius: "6px" }}>
@@ -763,64 +795,90 @@ const CandidateDetail: React.FC = () => {
             overflow: "hidden",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <Space size="large" align="start">
-              <Avatar
-                size={96}
-                style={{
-                  backgroundColor: avatarColor,
-                  fontSize: 40,
-                  fontWeight: "bold",
-                  boxShadow: `0 4px 12px ${avatarColor}40`,
-                }}
-              >
-                {getInitials(candidate.name)}
-              </Avatar>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Space size="large" align="start">
+                <Avatar
+                  size={96}
+                  style={{
+                    backgroundColor: avatarColor,
+                    fontSize: 40,
+                    fontWeight: "bold",
+                    boxShadow: `0 4px 12px ${avatarColor}40`,
+                  }}
+                >
+                  {getInitials(candidate.name)}
+                </Avatar>
 
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Title level={2} style={{ margin: 0 }}>
-                    {candidate.name}
-                  </Title>
-                  <Button
-                    type="text"
-                    icon={isFavorite ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
-                    onClick={() => setIsFavorite(!isFavorite)}
-                    size="large"
-                  />
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <Title level={2} style={{ margin: 0 }}>
+                      {candidate.name}
+                    </Title>
+                    <Button
+                      type="text"
+                      icon={isFavorite ? <StarFilled style={{ color: "#faad14" }} /> : <StarOutlined />}
+                      onClick={() => setIsFavorite(!isFavorite)}
+                      size="large"
+                    />
+                  </div>
+
+                  <Space style={{ marginTop: 8 }} wrap>
+                    <Tag
+                      color={getStatusColor(candidate.status)}
+                      style={{ padding: "4px 12px", borderRadius: "12px", fontSize: "14px" }}
+                    >
+                      {candidate.status}
+                    </Tag>
+                    <Tag
+                      color={getTechColor(candidate.technology)}
+                      style={{ padding: "4px 12px", borderRadius: "12px", fontSize: "14px" }}
+                    >
+                      {candidate.technology}
+                    </Tag>
+                    <Tag
+                      color={getLevelColor(candidate.level)}
+                      style={{ padding: "4px 12px", borderRadius: "12px", fontSize: "14px" }}
+                    >
+                      {candidate.level}
+                    </Tag>
+                  </Space>
                 </div>
+              </Space>
 
-                <Space style={{ marginTop: 8 }} wrap>
-                  <Tag
-                    color={getStatusColor(candidate.status)}
-                    style={{ padding: "4px 12px", borderRadius: "12px", fontSize: "14px" }}
-                  >
-                    {candidate.status}
-                  </Tag>
-                  <Tag
-                    color={getTechColor(candidate.technology)}
-                    style={{ padding: "4px 12px", borderRadius: "12px", fontSize: "14px" }}
-                  >
-                    {candidate.technology}
-                  </Tag>
-                  <Tag
-                    color={getLevelColor(candidate.level)}
-                    style={{ padding: "4px 12px", borderRadius: "12px", fontSize: "14px" }}
-                  >
-                    {candidate.level}
-                  </Tag>
-                </Space>
+              <Space>
+                <Button icon={<EditOutlined />} onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+                <Button type="primary" danger icon={<DeleteOutlined />} onClick={handleDeleteCandidate}>
+                  Delete
+                </Button>
+              </Space>
+            </div>
+
+            {candidate.cvUrl && (
+              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  href={candidate.cvUrl}
+                  download
+                  style={{ borderRadius: "6px" }}
+                >
+                  Download Resume
+                </Button>
+                <Button
+                  icon={<FileSearchOutlined />}
+                  onClick={() => {
+                    setSelectedResume(candidate.cvUrl!)
+                    setResumePreviewVisible(true)
+                  }}
+                  style={{ borderRadius: "6px" }}
+                >
+                  View Resume
+                </Button>
               </div>
-            </Space>
-
-            <Space>
-              <Button icon={<EditOutlined />} onClick={() => setEditing(true)}>
-                Edit
-              </Button>
-              <Button type="primary" danger icon={<DeleteOutlined />} onClick={handleDeleteCandidate}>
-                Delete
-              </Button>
-            </Space>
+            )}
           </div>
         </Card>
 
@@ -869,7 +927,6 @@ const CandidateDetail: React.FC = () => {
                     }
                     bordered={false}
                     style={{ borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
-                    className="assessment-card"
                   >
                     <motion.div variants={itemVariants}>
                       <Card
@@ -877,7 +934,7 @@ const CandidateDetail: React.FC = () => {
                         title={
                           <div style={{ display: "flex", alignItems: "center" }}>
                             <PlusOutlined style={{ marginRight: 8, color: avatarColor }} />
-                            <span>Add New Assessment</span>
+                            <span>Assign New Assessment</span>
                           </div>
                         }
                         style={{
@@ -886,7 +943,6 @@ const CandidateDetail: React.FC = () => {
                           boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
                         }}
                         bordered={false}
-                        className="add-assessment-form"
                       >
                         <Form form={assessForm} layout="vertical" onFinish={addAssessment}>
                           <Row gutter={24}>
@@ -902,40 +958,40 @@ const CandidateDetail: React.FC = () => {
                             <Col xs={24} md={12}>
                               <Form.Item
                                 name="score"
-                                label="Score"
+                                label="Score (%)"
                                 rules={[{ required: true, message: "Please enter score" }]}
                               >
                                 <InputNumber
                                   min={0}
                                   max={100}
                                   style={{ width: "100%" }}
-                                  placeholder="Enter score (0-100)"
+                                  placeholder="0–100"
                                 />
                               </Form.Item>
                             </Col>
                           </Row>
-
+            
                           <Form.Item name="remarks" label="Remarks">
                             <Input.TextArea
                               rows={2}
-                              placeholder="Enter assessment remarks or feedback"
+                              placeholder="Feedback or notes"
                               showCount
                               maxLength={500}
                             />
                           </Form.Item>
-
+            
                           <Form.Item
                             name="file"
-                            label="Assessment File"
+                            label="Upload File"
                             valuePropName="fileList"
-                            getValueFromEvent={(e) => e.fileList}
+                            getValueFromEvent={e => e.fileList}
                             rules={[{ required: true, message: "Please upload assessment file" }]}
                           >
-                            <Upload {...uploadProps} className="assessment-upload">
+                            <Upload {...uploadProps}>
                               <Button icon={<UploadOutlined />}>Select File</Button>
                             </Upload>
                           </Form.Item>
-
+            
                           <Form.Item>
                             <Button
                               type="primary"
@@ -943,116 +999,97 @@ const CandidateDetail: React.FC = () => {
                               icon={<CheckCircleOutlined />}
                               style={{ backgroundColor: avatarColor, borderColor: avatarColor }}
                             >
-                              Add Assessment
+                              Assign Assessment
                             </Button>
                           </Form.Item>
                         </Form>
                       </Card>
                     </motion.div>
-
+            
                     <motion.div variants={itemVariants}>
                       {candidate.assessments && candidate.assessments.length > 0 ? (
-                        <div className="assessment-list">
-                          <Row gutter={[16, 16]}>
-                            {candidate.assessments.map((assessment) => (
-                              <Col xs={24} sm={12} md={8} key={assessment._id}>
-                                <Card
-                                  hoverable
-                                  style={{
-                                    borderRadius: "12px",
-                                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                                  }}
-                                  actions={[
-                                    <Tooltip title="View Assessment" key="view">
-                                      <Button
-                                        type="text"
-                                        icon={<FileSearchOutlined />}
-                                        onClick={() => openResumePreview(assessment.fileUrl)}
-                                      />
-                                    </Tooltip>,
-                                    <Tooltip title="Download Assessment" key="download">
-                                      <Button
-                                        type="text"
-                                        icon={<DownloadOutlined />}
-                                        href={assessment.fileUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      />
-                                    </Tooltip>,
-                                  ]}
-                                >
-                                  <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                                    <div
-                                      style={{
-                                        width: "40px",
-                                        height: "40px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        fontSize: "20px",
-                                        backgroundColor: `${avatarColor}20`,
-                                        borderRadius: "8px",
-                                        color: avatarColor,
-                                      }}
-                                    >
-                                      {getFileIcon(assessment.fileUrl)}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                      <Text strong style={{ display: "block", marginBottom: "4px" }}>
-                                        {assessment.title}
-                                      </Text>
-                                      <div
-                                        style={{
-                                          display: "flex",
-                                          justifyContent: "space-between",
-                                          alignItems: "center",
-                                        }}
-                                      >
-                                        <Text type="secondary" style={{ fontSize: "12px" }}>
-                                          {new Date(assessment.createdAt).toLocaleDateString("en-US", {
-                                            year: "numeric",
-                                            month: "short",
-                                            day: "numeric",
-                                          })}
-                                        </Text>
-                                        {assessment.score !== undefined && (
-                                          <Tag
-                                            color={
-                                              assessment.score >= 80
-                                                ? "green"
-                                                : assessment.score >= 60
-                                                  ? "orange"
-                                                  : "red"
-                                            }
-                                          >
-                                            {assessment.score}%
-                                          </Tag>
-                                        )}
-                                      </div>
-                                      {assessment.remarks && (
-                                        <Paragraph
-                                          ellipsis={{ rows: 2 }}
-                                          type="secondary"
-                                          style={{ fontSize: "12px", marginTop: "8px" }}
-                                        >
-                                          {assessment.remarks}
-                                        </Paragraph>
-                                      )}
-                                    </div>
+                        <Row gutter={[16, 16]}>
+                          {candidate.assessments.map(assessment => (
+                            <Col xs={24} sm={12} md={8} key={assessment._id}>
+                              <Card
+                                hoverable
+                                style={{
+                                  borderRadius: "12px",
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+                                }}
+                                actions={[
+                                  <Tooltip title="View" key="view">
+  <Button
+    type="text"
+    icon={<EyeOutlined />}
+    onClick={() => openAssessmentDetails(assessment as AssessmentItem)}
+  />
+</Tooltip>,
+                                  <Tooltip title="Download" key="download">
+                                    <Button
+                                      type="text"
+                                      icon={<DownloadOutlined />}
+                                      href={assessment.fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    />
+                                  </Tooltip>,
+                                ]}
+                              >
+                                <div style={{ display: "flex", gap: 12 }}>
+                                  <div
+                                    style={{
+                                      width: 40,
+                                      height: 40,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: 20,
+                                      backgroundColor: `${avatarColor}20`,
+                                      borderRadius: 8,
+                                      color: avatarColor,
+                                    }}
+                                  >
+                                    {getFileIcon(assessment.fileUrl)}
                                   </div>
-                                </Card>
-                              </Col>
-                            ))}
-                          </Row>
-                        </div>
+                                  <div style={{ flex: 1 }}>
+                                    <Text strong>{assessment.title}</Text>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                                      <Text type="secondary" style={{ fontSize: 12 }}>
+                                        {dayjs(assessment.createdAt).format("MMM D, YYYY")}
+                                      </Text>
+                                      <Tag
+  color={
+    assessment.score !== undefined && assessment.score >= 80
+      ? "green"
+      : assessment.score !== undefined && assessment.score >= 60
+      ? "orange"
+      : "red"
+  }
+>
+  {assessment.score !== undefined ? `${assessment.score}%` : ''}
+</Tag>
+                                    </div>
+                                    {assessment.remarks && (
+                                      <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
+                                        {assessment.remarks}
+                                      </Text>
+                                    )}
+                                  </div>
+                                </div>
+                              </Card>
+                            </Col>
+                          ))}
+                        </Row>
                       ) : (
-                        <Empty description="No assessments added yet" />
+                        <Empty description="No assessments yet" />
                       )}
                     </motion.div>
                   </Card>
                 </motion.div>
               ),
             },
+            
             {
               key: "offers",
               label: (
@@ -1385,7 +1422,11 @@ const CandidateDetail: React.FC = () => {
         )}
       </Drawer>
     </div>
+    </>
   )
+ 
 }
 
-export default CandidateDetail
+
+
+export default CandidateDetail;
