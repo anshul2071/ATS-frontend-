@@ -96,10 +96,11 @@ interface Assessment {
 interface AssessmentItem {
   _id: string
   title: string
-  score: number
+  score: number | undefined
   remarks?: string
   fileUrl: string
   createdAt: string
+  
 }
 
 
@@ -255,9 +256,10 @@ const CandidateDetail:React.FC =() =>{
   const [statusHistory, setStatusHistory] = useState<{ status: string; date: string }[]>([])
   const [isFavorite, setIsFavorite] = useState(false)
   const [assessments, setAssessments] = useState<AssessmentItem[]>([])
- 
+  const [scoreModalVisible, setScoreModalVisible] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<AssessmentItem|null>(null)
+  
   const [detailModalVisible, setDetailModalVisible] = useState(false)
-  const [detailRecord, setDetailRecord] = useState<AssessmentItem | null>(null)
   
 
   const openAssessmentDetails = (rec: AssessmentItem) => {
@@ -282,47 +284,56 @@ const CandidateDetail:React.FC =() =>{
   }, [location])
 
   useEffect(() => {
-    if (!candidateId) return
-    ;(async () => {
-      setLoading(true)
+    if (!candidateId) return;
+  
+    (async () => {
+      setLoading(true);
+  
+      // load candidate data and its existing assessments
       try {
-        const { data } = await axiosInstance.get<CandidateType>(`/candidates/${candidateId}`)
-        setCandidate(data)
-        prevStatusRef.current = data.status
+        const { data: candidateData } = await axiosInstance.get<CandidateType>(
+          `/candidates/${candidateId}`
+        );
+        setCandidate(candidateData);
+        setAssessments(candidateData.assessments as AssessmentItem[]);        prevStatusRef.current = candidateData.status;
+  
         infoForm.setFieldsValue({
-          name: data.name,
-          phone: data.phone,
-          references: data.references,
-          technology: data.technology,
-          level: data.level,
-          salaryExpectation: data.salaryExpectation,
-          experience: data.experience,
-        })
-
-        // Mock status history
+          name: candidateData.name,
+          phone: candidateData.phone,
+          references: candidateData.references,
+          technology: candidateData.technology,
+          level: candidateData.level,
+          salaryExpectation: candidateData.salaryExpectation,
+          experience: candidateData.experience,
+        });
+  
         setStatusHistory([
           { status: "Applied", date: "2023-01-15" },
           { status: "Shortlisted", date: "2023-01-20" },
-          { status: data.status, date: "2023-02-01" },
-        ])
+          { status: candidateData.status, date: "2023-02-01" },
+        ]);
       } catch {
-        message.error("Failed to load candidate")
+        message.error("Failed to load candidate");
       }
+  
+      // load offers for this candidate
       try {
-        // Fetch offers for the candidate
-        const { data } = await axiosInstance.get<Offer[]>(`/candidates/${candidateId}/letters?type=offer`)
-        setOffers(data || [])
+        const { data: lettersData } = await axiosInstance.get<Offer[]>(
+          `/candidates/${candidateId}/letters?type=offer`
+        );
+        setOffers(lettersData || []);
       } catch (err: any) {
         if (err.response?.status === 404) {
-          setOffers([])
+          setOffers([]);
         } else {
-          message.error("Failed to load offers")
+          message.error("Failed to load offers");
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    })()
-  }, [candidateId, infoForm])
+    })();
+  }, [candidateId, infoForm]);
+  
 
   if (loading || !candidate) {
     return (
@@ -393,33 +404,47 @@ const CandidateDetail:React.FC =() =>{
 // at the very top of the file
 
 const addAssessment = async (vals: any) => {
-  try {
-    const formData = new FormData()
-    formData.append("title", vals.title)
-    formData.append("score", String(vals.score))
-    formData.append("remarks", vals.remarks || "")
-    // multer is listening for field name “file”
-    formData.append("file", vals.file[0].originFileObj)
+  if (!candidateId) return
 
+  try {
+    const fd = new FormData()
+    fd.append("title", vals.title)
+    fd.append("score", String(vals.score))
+    if (vals.remarks) {
+      fd.append("remarks", vals.remarks)
+    }
+
+    // vals.file is the Upload’s fileList
+    const fileList = vals.file as any[]
+    if (!fileList?.length) {
+      message.error("Please select a file before submitting.")
+      return
+    }
+    fd.append("file", fileList[0].originFileObj)
+
+    // POST to the plural `/assessments` endpoint
+  
     const { data: newAssessment } = await axiosInstance.post<AssessmentItem>(
-      `/candidates/${candidateId}/assessment`,
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
+      `/candidates/${candidateId}/assessments`,
+      fd,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
     )
+
 
     setAssessments(prev => [newAssessment, ...prev])
     assessForm.resetFields()
     message.success("Assessment added successfully")
   } catch (err: any) {
-    // catch multer/busboy “Unexpected end of form”
-    if (err.message?.includes("Unexpected end of form")) {
-      message.error("File upload was interrupted — please try again.")
+    console.error("addAssessment error:", err)
+
+    const apiMsg = err.response?.data?.message
+    if (apiMsg) {
+      message.error(apiMsg)
     } else {
       message.error("Upload failed")
     }
   }
 }
-
 
 
   const handleDeleteCandidate = () => {
@@ -902,6 +927,7 @@ const addAssessment = async (vals: any) => {
                 </motion.div>
               ),
             },
+           
             {
               key: "assessments",
               label: (
@@ -917,119 +943,51 @@ const addAssessment = async (vals: any) => {
                         <FileTextOutlined style={{ marginRight: 8, color: avatarColor }} />
                         <span>Assessment Records</span>
                         <Badge
-                          count={candidate?.assessments?.length || 0}
+                          count={assessments.length}
                           style={{
-                            backgroundColor: candidate?.assessments?.length ? avatarColor : "#d9d9d9",
+                            backgroundColor: assessments.length ? avatarColor : "#d9d9d9",
                             marginLeft: 8,
                           }}
                         />
                       </div>
                     }
                     bordered={false}
-                    style={{ borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+                    style={{ borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                   >
-                    <motion.div variants={itemVariants}>
-                      <Card
-                        type="inner"
-                        title={
-                          <div style={{ display: "flex", alignItems: "center" }}>
-                            <PlusOutlined style={{ marginRight: 8, color: avatarColor }} />
-                            <span>Assign New Assessment</span>
-                          </div>
-                        }
-                        style={{
-                          marginBottom: 24,
-                          borderRadius: "12px",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                        }}
-                        bordered={false}
+                    {/* ▶️ Navigate to full AssessmentPage to assign new ones */}
+                    <motion.div variants={itemVariants} style={{ marginBottom: 24 }}>
+                      <Button
+                        type="dashed"
+                        icon={<PlusOutlined />}
+                        onClick={() => navigate("/assessments")}
+                        block
                       >
-                        <Form form={assessForm} layout="vertical" onFinish={addAssessment}>
-                          <Row gutter={24}>
-                            <Col xs={24} md={12}>
-                              <Form.Item
-                                name="title"
-                                label="Assessment Title"
-                                rules={[{ required: true, message: "Please enter assessment title" }]}
-                              >
-                                <Input placeholder="Enter assessment title" />
-                              </Form.Item>
-                            </Col>
-                            <Col xs={24} md={12}>
-                              <Form.Item
-                                name="score"
-                                label="Score (%)"
-                                rules={[{ required: true, message: "Please enter score" }]}
-                              >
-                                <InputNumber
-                                  min={0}
-                                  max={100}
-                                  style={{ width: "100%" }}
-                                  placeholder="0–100"
-                                />
-                              </Form.Item>
-                            </Col>
-                          </Row>
-            
-                          <Form.Item name="remarks" label="Remarks">
-                            <Input.TextArea
-                              rows={2}
-                              placeholder="Feedback or notes"
-                              showCount
-                              maxLength={500}
-                            />
-                          </Form.Item>
-            
-                          <Form.Item
-                            name="file"
-                            label="Upload File"
-                            valuePropName="fileList"
-                            getValueFromEvent={e => e.fileList}
-                            rules={[{ required: true, message: "Please upload assessment file" }]}
-                          >
-                            <Upload {...uploadProps}>
-                              <Button icon={<UploadOutlined />}>Select File</Button>
-                            </Upload>
-                          </Form.Item>
-            
-                          <Form.Item>
-                            <Button
-                              type="primary"
-                              htmlType="submit"
-                              icon={<CheckCircleOutlined />}
-                              style={{ backgroundColor: avatarColor, borderColor: avatarColor }}
-                            >
-                              Assign Assessment
-                            </Button>
-                          </Form.Item>
-                        </Form>
-                      </Card>
+                        Assign New Assessment
+                      </Button>
                     </motion.div>
             
+                    {/* ▶️ History & grading of existing assessments */}
                     <motion.div variants={itemVariants}>
-                      {candidate.assessments && candidate.assessments.length > 0 ? (
+                      {assessments.length > 0 ? (
                         <Row gutter={[16, 16]}>
-                          {candidate.assessments.map(assessment => (
-                            <Col xs={24} sm={12} md={8} key={assessment._id}>
+                          {assessments.map(a => (
+                            <Col xs={24} sm={12} md={8} key={a._id}>
                               <Card
                                 hoverable
-                                style={{
-                                  borderRadius: "12px",
-                                  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                                }}
+                                style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
                                 actions={[
-                                  <Tooltip title="View" key="view">
-  <Button
-    type="text"
-    icon={<EyeOutlined />}
-    onClick={() => openAssessmentDetails(assessment as AssessmentItem)}
-  />
-</Tooltip>,
+                                  <Tooltip title="View Details" key="view">
+                                    <Button
+                                      type="text"
+                                      icon={<EyeOutlined />}
+                                      onClick={() => openAssessmentDetails(a)}
+                                    />
+                                  </Tooltip>,
                                   <Tooltip title="Download" key="download">
                                     <Button
                                       type="text"
                                       icon={<DownloadOutlined />}
-                                      href={assessment.fileUrl}
+                                      href={a.fileUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     />
@@ -1050,29 +1008,21 @@ const addAssessment = async (vals: any) => {
                                       color: avatarColor,
                                     }}
                                   >
-                                    {getFileIcon(assessment.fileUrl)}
+                                    {getFileIcon(a.fileUrl)}
                                   </div>
                                   <div style={{ flex: 1 }}>
-                                    <Text strong>{assessment.title}</Text>
+                                    <Text strong>{a.title}</Text>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
                                       <Text type="secondary" style={{ fontSize: 12 }}>
-                                        {dayjs(assessment.createdAt).format("MMM D, YYYY")}
+                                        {dayjs(a.createdAt).format("MMM D, YYYY")}
                                       </Text>
-                                      <Tag
-  color={
-    assessment.score !== undefined && assessment.score >= 80
-      ? "green"
-      : assessment.score !== undefined && assessment.score >= 60
-      ? "orange"
-      : "red"
-  }
->
-  {assessment.score !== undefined ? `${assessment.score}%` : ''}
-</Tag>
+                                      <Tag color={a.score! >= 80 ? "green" : a.score! >= 60 ? "orange" : "red"}>
+                                        {a.score}%
+                                      </Tag>
                                     </div>
-                                    {assessment.remarks && (
+                                    {a.remarks && (
                                       <Text type="secondary" style={{ fontSize: 12 }} ellipsis>
-                                        {assessment.remarks}
+                                        {a.remarks}
                                       </Text>
                                     )}
                                   </div>
@@ -1088,8 +1038,9 @@ const addAssessment = async (vals: any) => {
                   </Card>
                 </motion.div>
               ),
-            },
+            }
             
+,
             {
               key: "offers",
               label: (

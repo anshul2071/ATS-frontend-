@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import type React from "react"
+import { useEffect, useState } from "react"
 import {
   Card,
   Radio,
@@ -30,6 +31,7 @@ import {
   Drawer,
   Row,
   Col,
+  ConfigProvider,
 } from "antd"
 import type { ColumnsType } from "antd/es/table"
 import {
@@ -49,6 +51,7 @@ import {
   ClockCircleOutlined,
   LaptopOutlined,
   ExclamationCircleOutlined,
+  UserOutlined,
 } from "@ant-design/icons"
 import { motion } from "framer-motion"
 import dayjs, { type Dayjs } from "dayjs"
@@ -72,7 +75,7 @@ const getAvatarColor = (name: string) => avatarColors[name.charCodeAt(0) % avata
 const getInitials = (name: string) =>
   name
     .split(" ")
-    .map(w => w[0])
+    .map((w) => w[0])
     .join("")
     .toUpperCase()
     .slice(0, 2)
@@ -132,7 +135,7 @@ const OfferPage: React.FC = () => {
     setLoadingCands(true)
     axiosInstance
       .get<Candidate[]>(`/candidates?status=${scope === "offer" ? "Hired" : "Rejected"}`)
-      .then(r => setCandidates(r.data))
+      .then((r) => setCandidates(r.data))
       .catch(() => message.error("Failed to load candidates"))
       .finally(() => setLoadingCands(false))
   }, [scope])
@@ -147,11 +150,11 @@ const OfferPage: React.FC = () => {
     setLoadingLetters(true)
     axiosInstance
       .get<Letter[]>(`/candidates/${selectedCand}/letters`)
-      .then(r => {
+      .then((r) => {
         setLetters(r.data)
         setLetterStats({
-          offers: r.data.filter(l => l.templateType === "offer").length,
-          rejections: r.data.filter(l => l.templateType === "rejection").length,
+          offers: r.data.filter((l) => l.templateType === "offer").length,
+          rejections: r.data.filter((l) => l.templateType === "rejection").length,
         })
       })
       .catch(() => message.error("Failed to load letters"))
@@ -161,10 +164,10 @@ const OfferPage: React.FC = () => {
   // 3️⃣ Submit new letter
   const onFinish = async (vals: FormValues) => {
     setSubmitting(true)
-  
+
     // Build payload
     const payload: any = { templateType: vals.templateType }
-  
+
     if (vals.templateType === "offer") {
       // Defensive checks
       if (
@@ -179,7 +182,7 @@ const OfferPage: React.FC = () => {
         setSubmitting(false)
         return
       }
-  
+
       payload.position = vals.position
       payload.technology = vals.technology
       payload.startingDate = vals.startingDate.toISOString()
@@ -187,13 +190,11 @@ const OfferPage: React.FC = () => {
       payload.probationDate = vals.probationDate.toISOString()
       payload.acceptanceDeadline = vals.acceptanceDeadline.toISOString()
     }
-  
+
     try {
       await axiosInstance.post(`/candidates/${vals.candidateId}/letters`, payload)
       message.success(
-        vals.templateType === "offer"
-          ? "🟢 Offer letter sent successfully!"
-          : "🔴 Rejection letter sent successfully!"
+        vals.templateType === "offer" ? "🟢 Offer letter sent successfully!" : "🔴 Rejection letter sent successfully!",
       )
       form.resetFields([
         "templateType",
@@ -208,8 +209,8 @@ const OfferPage: React.FC = () => {
       const { data } = await axiosInstance.get<Letter[]>(`/candidates/${vals.candidateId}/letters`)
       setLetters(data)
       setLetterStats({
-        offers: data.filter(l => l.templateType === "offer").length,
-        rejections: data.filter(l => l.templateType === "rejection").length,
+        offers: data.filter((l) => l.templateType === "offer").length,
+        rejections: data.filter((l) => l.templateType === "rejection").length,
       })
       setActiveTab("history")
     } catch (err: any) {
@@ -219,7 +220,6 @@ const OfferPage: React.FC = () => {
       setSubmitting(false)
     }
   }
-  
 
   // Preview & Details helpers
   const generatePreview = (ltr: Letter) =>
@@ -238,7 +238,7 @@ const OfferPage: React.FC = () => {
       : `
         <h2 style="text-align:center;color:#ff4d4f">❌ Rejection</h2>
         <p>Dear ${ltr.sentTo},</p>
-        <p>Thank you for applying. We won’t proceed at this time.</p>
+        <p>Thank you for applying. We won't proceed at this time.</p>
         <p>Regards,<br/>HR Team</p>`
 
   const preview = (ltr: Letter) => {
@@ -255,10 +255,16 @@ const OfferPage: React.FC = () => {
       title: "Type",
       dataIndex: "templateType",
       key: "type",
-      render: t =>
-        t === "offer"
-          ? <Tag color="success" icon={<CheckCircleOutlined />}>OFFER</Tag>
-          : <Tag color="error" icon={<CloseCircleOutlined />}>REJECTION</Tag>,
+      render: (t) =>
+        t === "offer" ? (
+          <Tag color="success" icon={<CheckCircleOutlined />}>
+            OFFER
+          </Tag>
+        ) : (
+          <Tag color="error" icon={<CloseCircleOutlined />}>
+            REJECTION
+          </Tag>
+        ),
       filters: [
         { text: "Offer", value: "offer" },
         { text: "Rejection", value: "rejection" },
@@ -275,7 +281,7 @@ const OfferPage: React.FC = () => {
       title: "Sent On",
       dataIndex: "createdAt",
       key: "sent",
-      render: d => dayjs(d).format("MMM D, YYYY"),
+      render: (d) => dayjs(d).format("MMM D, YYYY"),
       sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
     {
@@ -283,296 +289,467 @@ const OfferPage: React.FC = () => {
       key: "actions",
       render: (_, r) => (
         <Space>
-          <Tooltip title="Preview"><Button icon={<EyeOutlined />} onClick={() => preview(r)} /></Tooltip>
-          <Tooltip title="Details"><Button icon={<FileTextOutlined />} onClick={() => openDetails(r)} /></Tooltip>
+          <Tooltip title="Preview">
+            <Button icon={<EyeOutlined />} onClick={() => preview(r)} />
+          </Tooltip>
+          <Tooltip title="Details">
+            <Button icon={<FileTextOutlined />} onClick={() => openDetails(r)} />
+          </Tooltip>
         </Space>
       ),
     },
   ]
 
-  return (
-    <div style={{ padding: 24, maxWidth: 1000, margin: "auto" }}>
-      <Title level={2} style={{ textAlign: "center", marginBottom: 32 }}>Offer & Rejection Letters</Title>
+  // Find selected candidate info for display
+  const selectedCandInfo = candidates.find((c) => c._id === selectedCand)
 
-      <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-        <Card bordered={false} style={{ textAlign: "center", marginBottom: 24, borderRadius: 12 }}>
+  return (
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: "#5b21b6", // Deep purple
+        },
+      }}
+    >
+      <div style={{ padding: 24, maxWidth: 1000, margin: "auto" }}>
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <Title
+            level={2}
+            style={{ color: "#5b21b6", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <FileTextOutlined style={{ marginRight: 12 }} />
+            Offer & Rejection Letters
+          </Title>
+        </div>
+
+        {/* Letter Type Selection */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
           <Radio.Group
             buttonStyle="solid"
             size="large"
-            onChange={e => {
+            onChange={(e) => {
               setScope(e.target.value)
               setSelectedCand(null)
               setActiveTab("create")
             }}
             value={scope}
+            style={{ display: "flex" }}
           >
-            <Radio.Button value="offer" style={{ width: 150 }}>
-              <CheckCircleOutlined /> Offer Letters
+            <Radio.Button
+              value="offer"
+              style={{
+                width: 150,
+                height: 45,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: scope === "offer" ? "#5b21b6" : "#fff",
+                color: scope === "offer" ? "#fff" : "#000",
+                borderColor: scope === "offer" ? "#5b21b6" : "#d9d9d9",
+              }}
+            >
+              <CheckCircleOutlined style={{ marginRight: 8 }} /> Offer Letters
             </Radio.Button>
-            <Radio.Button value="rejection" style={{ width: 150 }}>
-              <CloseCircleOutlined /> Rejection Letters
+            <Radio.Button
+              value="rejection"
+              style={{
+                width: 150,
+                height: 45,
+                display: "grid",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: scope === "rejection" ? "#5b21b6" : "#fff",
+                color: scope === "rejection" ? "#fff" : "#000",
+                borderColor: scope === "rejection" ? "#5b21b6" : "#d9d9d9",
+              }}
+            >
+              <CloseCircleOutlined style={{ marginRight: 8, marginBottom: 2 }} /> Rejection
             </Radio.Button>
           </Radio.Group>
-        </Card>
-      </motion.div>
+        </div>
 
-      {scope && (
-        <motion.div initial="hidden" animate="visible" variants={itemVariants}>
-          <Card bordered={false} style={{ marginBottom: 24, borderRadius: 12 }}>
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <Text strong>Select Candidate ({scope === "offer" ? "Hired" : "Rejected"})</Text>
+        {scope && (
+          <motion.div initial="hidden" animate="visible" variants={itemVariants}>
+            {/* Candidate Selection */}
+            <Card
+              bordered={true}
+              style={{
+                marginBottom: 24,
+                borderRadius: 8,
+                borderColor: "#e5e7eb",
+              }}
+            >
+              <div style={{ marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 16, color: "#374151", display: "flex", alignItems: "center" }}>
+                  <UserOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                  Select Candidate ({scope === "offer" ? "Hired" : "Rejected"})
+                </Text>
+              </div>
+
               <Spin spinning={loadingCands}>
-                <Select
-                  showSearch
-                  placeholder="Pick a candidate"
-                  style={{ width: "100%" }}
-                  onChange={id => {
-                    setSelectedCand(id)
-                    form.setFieldsValue({ candidateId: id })
-                  }}
-                  value={selectedCand}
-                  notFoundContent={<Empty description="No candidates" />}
-                  suffixIcon={<SearchOutlined />}
-                >
-                  {candidates.map(c => (
-                    <Option key={c._id} value={c._id}>
-                      <Space>
-                        <Avatar style={{ backgroundColor: getAvatarColor(c.name) }}>
-                          {getInitials(c.name)}
-                        </Avatar>
-                        <div>
-                          <div><strong>{c.name}</strong></div>
-                          <div style={{ fontSize: 12, color: "#888" }}>{c.email}</div>
+                <div style={{ position: "relative" }}>
+                  {selectedCandInfo && (
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+                      <Avatar
+                        style={{
+                          backgroundColor: "#ec4899", // Pink color for avatar
+                          marginRight: 8,
+                        }}
+                        size="small"
+                      >
+                        {getInitials(selectedCandInfo.name)}
+                      </Avatar>
+                      <Text strong>{selectedCandInfo.name}</Text>
+                      <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                        {selectedCandInfo.email}
+                      </Text>
+                    </div>
+                  )}
+
+                  <Select
+                    showSearch
+                    placeholder="Search and select a candidate"
+                    style={{ width: "100%" }}
+                    onChange={(id) => {
+                      setSelectedCand(id)
+                      form.setFieldsValue({ candidateId: id, templateType: scope })
+                    }}
+                    value={selectedCand}
+                    notFoundContent={<Empty description="No candidates found" />}
+                    suffixIcon={<SearchOutlined />}
+                    optionLabelProp="label"
+                  >
+                    {candidates.map((c) => (
+                      <Option key={c._id} value={c._id} label={c.name}>
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <Avatar
+                            style={{
+                              backgroundColor: "#ec4899", // Pink color for avatar
+                              marginRight: 8,
+                            }}
+                            size="small"
+                          >
+                            {getInitials(c.name)}
+                          </Avatar>
+                          <div>
+                            <div style={{ fontWeight: "bold" }}>{c.name}</div>
+                            <div style={{ fontSize: 12, color: "#888" }}>{c.email}</div>
+                          </div>
                         </div>
-                      </Space>
-                    </Option>
-                  ))}
-                </Select>
+                      </Option>
+                    ))}
+                  </Select>
+                </div>
               </Spin>
-              {!loadingCands && !candidates.length && (
+
+              {!loadingCands && candidates.length === 0 && (
                 <Alert
                   type="info"
                   showIcon
                   message="No candidates"
-                  description="There are no candidates with that status."
+                  description={`There are no candidates with ${scope === "offer" ? "Hired" : "Rejected"} status.`}
+                  style={{ marginTop: 16 }}
                 />
               )}
-            </Space>
-          </Card>
-        </motion.div>
-      )}
-
-      {selectedCand && (
-        <>
-          <motion.div initial="hidden" animate="visible" variants={itemVariants}>
-            <Tabs
-              activeKey={activeTab}
-              onChange={k => setActiveTab(k as any)}
-              type="card"
-              style={{ marginBottom: 24 }}
-            >
-              <TabPane key="create" tab={<><SendOutlined /> Create</>} />
-              <TabPane
-                key="history"
-                tab={<><HistoryOutlined /> History <Badge count={letters.length} /></>}
-              />
-            </Tabs>
+            </Card>
           </motion.div>
+        )}
 
-          {activeTab === "create" ? (
-            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-              <Card bordered={false} style={{ borderRadius: 12 }}>
-                <Form
-                  form={form}
-                  layout="vertical"
-                  onFinish={onFinish}
-                  initialValues={{ candidateId: selectedCand, templateType: scope! }}
-                >
-                  <Form.Item name="candidateId" hidden><Input /></Form.Item>
-                  <Form.Item name="templateType" hidden><Input /></Form.Item>
-
-                  {scope === "offer" && (
-                    <>
-                      <Row gutter={16}>
-                        <Col span={12}>
-                          <Form.Item name="position" label="Position" rules={[{ required: true }]}>
-                            <Input prefix={<TeamOutlined />} placeholder="e.g. Frontend Developer" />
-                          </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                          <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
-                            <Input prefix={<LaptopOutlined />} placeholder="e.g. ReactJS" />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Row gutter={16}>
-                        <Col span={12}>
-                          <Form.Item name="startingDate" label="Start Date" rules={[{ required: true }]}>
-                            <DatePicker style={{ width: "100%" }} />
-                          </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                          <Form.Item name="salary" label="Salary" rules={[{ required: true }]}>
-                            <InputNumber
-                              style={{ width: "100%" }}
-                              formatter={v => `$${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                              parser={v => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                      <Row gutter={16}>
-                        <Col span={12}>
-                          <Form.Item name="probationDate" label="Probation End" rules={[{ required: true }]}>
-                            <DatePicker style={{ width: "100%" }} />
-                          </Form.Item>
-                        </Col>
-                        <Col span={12}>
-                          <Form.Item name="acceptanceDeadline" label="Accept By" rules={[{ required: true }]}>
-                            <DatePicker style={{ width: "100%" }} />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                    </>
-                  )}
-
-                  <Form.Item>
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      loading={submitting}
-                      icon={<SendOutlined />}
-                      block
-                    >
-                      Send {scope === "offer" ? "Offer" : "Rejection"}
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </Card>
-            </motion.div>
-          ) : (
-            <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-              <Card bordered={false} style={{ borderRadius: 12 }}>
-                {loadingLetters ? (
-                  <Skeleton active paragraph={{ rows: 5 }} />
-                ) : letters.length > 0 ? (
-                  <Table<Letter>
-                    rowKey="_id"
-                    columns={columns}
-                    dataSource={letters}
-                    pagination={{ pageSize: 5 }}
-                  />
-                ) : (
-                  <Empty description="No letters yet" />
-                )}
-              </Card>
-            </motion.div>
-          )}
-        </>
-      )}
-
-      <Modal
-        open={previewVisible}
-        title={<><MailOutlined /> Preview</>}
-        onCancel={() => setPreviewVisible(false)}
-        footer={[
-          <Button key="print" icon={<PrinterOutlined />} onClick={() => window.print()}>
-            Print
-          </Button>,
-          <Button key="close" type="primary" onClick={() => setPreviewVisible(false)}>
-            Close
-          </Button>,
-        ]}
-      >
-        <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-      </Modal>
-
-      <Drawer
-        width={400}
-        open={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
-        title={
-          selectedLetter && (
-            <><FileTextOutlined /> {selectedLetter.templateType === "offer" ? "Offer" : "Rejection"} Details</>
-          )
-        }
-      >
-        {selectedLetter && (
+        {selectedCand && (
           <>
-            <div
-              style={{
-                padding: 16,
-                borderRadius: 8,
-                marginBottom: 24,
-                background: selectedLetter.templateType === "offer" ? "#f6ffed" : "#fff2f0",
-                border: selectedLetter.templateType === "offer" ? "1px solid #b7eb8f" : "1px solid #ffccc7",
-              }}
-            >
-              <Space>
-                {selectedLetter.templateType === "offer" ? (
-                  <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                ) : (
-                  <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
-                )}
-                <Text strong>
-                  {selectedLetter.templateType === "offer" ? "Offer" : "Rejection"} Letter
-                </Text>
-              </Space>
-              <div style={{ marginTop: 8, color: "#888" }}>
-                Sent to {selectedLetter.sentTo} on{" "}
-                {dayjs(selectedLetter.createdAt).format("MMM D, YYYY, h:mm A")}
-              </div>
-            </div>
+            {/* Tabs */}
+            <motion.div initial="hidden" animate="visible" variants={itemVariants}>
+              <Tabs activeKey={activeTab} onChange={(k) => setActiveTab(k as any)} style={{ marginBottom: 24 }}>
+                <TabPane
+                  key="create"
+                  tab={
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: activeTab === "create" ? "#5b21b6" : undefined,
+                      }}
+                    >
+                      <PlusOutlined style={{ marginRight: 8 }} /> Create
+                    </span>
+                  }
+                />
+                <TabPane
+                  key="history"
+                  tab={
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: activeTab === "history" ? "#5b21b6" : undefined,
+                      }}
+                    >
+                      <HistoryOutlined style={{ marginRight: 8 }} /> History
+                      {letters.length > 0 && (
+                        <Badge
+                          count={letters.length}
+                          style={{
+                            marginLeft: 8,
+                            backgroundColor: "#ef4444",
+                          }}
+                        />
+                      )}
+                    </span>
+                  }
+                />
+              </Tabs>
+            </motion.div>
 
-            {selectedLetter.templateType === "offer" && (
-              <>
-                <Divider>Details</Divider>
-                <Statistic
-                  title="Position"
-                  value={selectedLetter.position}
-                  prefix={<TeamOutlined />}
-                />
-                <Statistic
-                  title="Technology"
-                  value={selectedLetter.technology}
-                  prefix={<LaptopOutlined />}
-                />
-                <Statistic
-                  title="Salary"
-                  value={`$${selectedLetter.salary.toLocaleString()}`}
-                  prefix={<DollarOutlined />}
-                />
-                <Statistic
-                  title="Start Date"
-                  value={dayjs(selectedLetter.startingDate).format("MMM D, YYYY")}
-                  prefix={<CalendarOutlined />}
-                />
-                <Statistic
-                  title="Probation Ends"
-                  value={dayjs(selectedLetter.probationDate).format("MMM D, YYYY")}
-                  prefix={<ClockCircleOutlined />}
-                />
-                <Statistic
-                  title="Accept By"
-                  value={dayjs(selectedLetter.acceptanceDeadline).format("MMM D, YYYY")}
-                  prefix={<ExclamationCircleOutlined />}
-                />
-              </>
+            {activeTab === "create" ? (
+              <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+                <Card bordered={true} style={{ borderRadius: 8, borderColor: "#e5e7eb" }}>
+                  <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={onFinish}
+                    initialValues={{ candidateId: selectedCand, templateType: scope }}
+                    requiredMark={false}
+                  >
+                    <Form.Item name="candidateId" hidden>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="templateType" hidden>
+                      <Input />
+                    </Form.Item>
+
+                    {scope === "offer" && (
+                      <>
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item
+                              name="position"
+                              label={
+                                <span style={{ color: "#374151", display: "flex", alignItems: "center" }}>
+                                  <TeamOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                                  Position
+                                </span>
+                              }
+                              rules={[{ required: true }]}
+                            >
+                              <Input placeholder="e.g. Frontend Developer" />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item
+                              name="technology"
+                              label={
+                                <span style={{ color: "#374151", display: "flex", alignItems: "center" }}>
+                                  <LaptopOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                                  Technology
+                                </span>
+                              }
+                              rules={[{ required: true }]}
+                            >
+                              <Input placeholder="e.g. ReactJS" />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item
+                              name="startingDate"
+                              label={
+                                <span style={{ color: "#374151", display: "flex", alignItems: "center" }}>
+                                  <CalendarOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                                  Start Date
+                                </span>
+                              }
+                              rules={[{ required: true }]}
+                            >
+                              <DatePicker style={{ width: "100%" }} placeholder="Select start date" />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item
+                              name="salary"
+                              label={
+                                <span style={{ color: "#374151", display: "flex", alignItems: "center" }}>
+                                  <DollarOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                                  Salary
+                                </span>
+                              }
+                              rules={[{ required: true }]}
+                            >
+                              <InputNumber
+                                style={{ width: "100%" }}
+                                formatter={(v) => `$${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                                parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, "") || 0)}
+                                placeholder="Enter annual salary"
+                              />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                        <Row gutter={16}>
+                          <Col span={12}>
+                            <Form.Item
+                              name="probationDate"
+                              label={
+                                <span style={{ color: "#374151", display: "flex", alignItems: "center" }}>
+                                  <ClockCircleOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                                  Probation End
+                                </span>
+                              }
+                              rules={[{ required: true }]}
+                            >
+                              <DatePicker style={{ width: "100%" }} placeholder="Select probation end date" />
+                            </Form.Item>
+                          </Col>
+                          <Col span={12}>
+                            <Form.Item
+                              name="acceptanceDeadline"
+                              label={
+                                <span style={{ color: "#374151", display: "flex", alignItems: "center" }}>
+                                  <ExclamationCircleOutlined style={{ marginRight: 8, color: "#5b21b6" }} />
+                                  Accept By
+                                </span>
+                              }
+                              rules={[{ required: true }]}
+                            >
+                              <DatePicker style={{ width: "100%" }} placeholder="Select acceptance deadline" />
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </>
+                    )}
+
+                    <Form.Item style={{ marginTop: 24 }}>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={submitting}
+                        icon={<SendOutlined />}
+                        block
+                        size="large"
+                        style={{
+                          height: 48,
+                          backgroundColor: "#10b981", // Green color for send button
+                          borderColor: "#10b981",
+                        }}
+                      >
+                        Send {scope === "offer" ? "Offer" : "Rejection"} Letter
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                </Card>
+              </motion.div>
+            ) : (
+              <motion.div initial="hidden" animate="visible" variants={containerVariants}>
+                <Card bordered={true} style={{ borderRadius: 8, borderColor: "#e5e7eb" }}>
+                  {loadingLetters ? (
+                    <Skeleton active paragraph={{ rows: 5 }} />
+                  ) : letters.length > 0 ? (
+                    <Table<Letter> rowKey="_id" columns={columns} dataSource={letters} pagination={{ pageSize: 5 }} />
+                  ) : (
+                    <Empty description="No letters yet" />
+                  )}
+                </Card>
+              </motion.div>
             )}
-
-            <Divider>Timeline</Divider>
-            <Timeline>
-              <Timeline.Item color="blue">
-                Created: {dayjs(selectedLetter.createdAt).format("MMM D, YYYY, h:mm A")}
-              </Timeline.Item>
-              <Timeline.Item color="green">
-                Email sent to {selectedLetter.sentTo}
-              </Timeline.Item>
-            </Timeline>
           </>
         )}
-      </Drawer>
-    </div>
+
+        <Modal
+          open={previewVisible}
+          title={
+            <>
+              <MailOutlined /> Preview
+            </>
+          }
+          onCancel={() => setPreviewVisible(false)}
+          footer={[
+            <Button key="print" icon={<PrinterOutlined />} onClick={() => window.print()}>
+              Print
+            </Button>,
+            <Button key="close" type="primary" onClick={() => setPreviewVisible(false)}>
+              Close
+            </Button>,
+          ]}
+        >
+          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        </Modal>
+
+        <Drawer
+          width={400}
+          open={drawerVisible}
+          onClose={() => setDrawerVisible(false)}
+          title={
+            selectedLetter && (
+              <>
+                <FileTextOutlined /> {selectedLetter.templateType === "offer" ? "Offer" : "Rejection"} Details
+              </>
+            )
+          }
+        >
+          {selectedLetter && (
+            <>
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 8,
+                  marginBottom: 24,
+                  background: selectedLetter.templateType === "offer" ? "#f6ffed" : "#fff2f0",
+                  border: selectedLetter.templateType === "offer" ? "1px solid #b7eb8f" : "1px solid #ffccc7",
+                }}
+              >
+                <Space>
+                  {selectedLetter.templateType === "offer" ? (
+                    <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                  ) : (
+                    <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
+                  )}
+                  <Text strong>{selectedLetter.templateType === "offer" ? "Offer" : "Rejection"} Letter</Text>
+                </Space>
+                <div style={{ marginTop: 8, color: "#888" }}>
+                  Sent to {selectedLetter.sentTo} on {dayjs(selectedLetter.createdAt).format("MMM D, YYYY, h:mm A")}
+                </div>
+              </div>
+
+              {selectedLetter.templateType === "offer" && (
+                <>
+                  <Divider>Details</Divider>
+                  <Statistic title="Position" value={selectedLetter.position} prefix={<TeamOutlined />} />
+                  <Statistic title="Technology" value={selectedLetter.technology} prefix={<LaptopOutlined />} />
+                  <Statistic
+                    title="Salary"
+                    value={`$${selectedLetter.salary.toLocaleString()}`}
+                    prefix={<DollarOutlined />}
+                  />
+                  <Statistic
+                    title="Start Date"
+                    value={dayjs(selectedLetter.startingDate).format("MMM D, YYYY")}
+                    prefix={<CalendarOutlined />}
+                  />
+                  <Statistic
+                    title="Probation Ends"
+                    value={dayjs(selectedLetter.probationDate).format("MMM D, YYYY")}
+                    prefix={<ClockCircleOutlined />}
+                  />
+                  <Statistic
+                    title="Accept By"
+                    value={dayjs(selectedLetter.acceptanceDeadline).format("MMM D, YYYY")}
+                    prefix={<ExclamationCircleOutlined />}
+                  />
+                </>
+              )}
+
+              <Divider>Timeline</Divider>
+              <Timeline>
+                <Timeline.Item color="blue">
+                  Created: {dayjs(selectedLetter.createdAt).format("MMM D, YYYY, h:mm A")}
+                </Timeline.Item>
+                <Timeline.Item color="green">Email sent to {selectedLetter.sentTo}</Timeline.Item>
+              </Timeline>
+            </>
+          )}
+        </Drawer>
+      </div>
+    </ConfigProvider>
   )
 }
 
