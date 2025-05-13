@@ -334,7 +334,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Anshul Rawal**
 - GitHub: [github.com/anshul2071](https://github.com/anshul2071)
-- LinkedIn: [linkedin.com/in/anshulrawal](https://linkedin.com/in/anshulrawal)
+- LinkedIn: [linkedin.com/in/anshul-rawal-54b075282/](https://www.linkedin.com/in/anshul-rawal-54b075282/)
 
 ---
 
