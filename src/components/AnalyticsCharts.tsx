@@ -232,7 +232,7 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ pipeline, timeToHire,
               {timeToHire && timeToHire.length > 1 ? getTrendDirection() : null}
             </div>
           }
-          bordered={false}
+          variant="borderless"
           style={cardStyle}
           headStyle={cardHeadStyle}
           bodyStyle={cardBodyStyle}

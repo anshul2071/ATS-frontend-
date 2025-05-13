@@ -713,7 +713,7 @@ const Dashboard: React.FC = () => {
 
               <Card
                 title="Candidate Resume"
-                variant="borderedless"
+                variant="borderless"
                 headStyle={{ borderBottom: "1px solid #f0f0f0", padding: "12px 24px" }}
               >
                 <Button type="primary" icon={<DownloadOutlined />}>
